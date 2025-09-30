@@ -5,8 +5,6 @@
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Research Project](https://img.shields.io/badge/Research%20Project-Weather%20Forecasting%20LoRA-purple)
 ![Methodology](https://img.shields.io/badge/Methodology-Schulman%20et%20al.%202025-red)
-![Status](https://img.shields.io/badge/Status-Complete%20Implementation-brightgreen)
-[![arXiv](https://img.shields.io/badge/Inspired%20by-arXiv%3A2025.09929-b31b1b.svg)](https://thinkingmachines.ai/blog/lora/)
 ![Domain](https://img.shields.io/badge/Domain-Meteorology%20%2B%20NLP-teal)
 ![Model Type](https://img.shields.io/badge/Model-LoRA%20Fine--tuning-blue)
 ![Framework](https://img.shields.io/badge/Framework-Transformers%20%2B%20PEFT-yellow)
