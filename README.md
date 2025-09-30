@@ -3,8 +3,13 @@
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Research](https://img.shields.io/badge/Research-Paper-purple)
-[![arXiv](https://img.shields.io/badge/arXiv-2025.09929-b31b1b.svg)](https://thinkingmachines.ai/blog/lora/)
+![Research Project](https://img.shields.io/badge/Research%20Project-Weather%20Forecasting%20LoRA-purple)
+![Methodology](https://img.shields.io/badge/Methodology-Schulman%20et%20al.%202025-red)
+![Status](https://img.shields.io/badge/Status-Complete%20Implementation-brightgreen)
+[![arXiv](https://img.shields.io/badge/Inspired%20by-arXiv%3A2025.09929-b31b1b.svg)](https://thinkingmachines.ai/blog/lora/)
+![Domain](https://img.shields.io/badge/Domain-Meteorology%20%2B%20NLP-teal)
+![Model Type](https://img.shields.io/badge/Model-LoRA%20Fine--tuning-blue)
+![Framework](https://img.shields.io/badge/Framework-Transformers%20%2B%20PEFT-yellow)
 
 A comprehensive research implementation of weather forecasting using LoRA (Low-Rank Adaptation) fine-tuning on Large Language Models, following the groundbreaking methodology from Schulman et al. (2025) "LoRA Without Regret".
 
@@ -17,6 +22,7 @@ This project transforms numerical weather data into natural language forecasts u
 This work builds upon the seminal paper **"LoRA Without Regret"** by John Schulman and the Thinking Machines Lab, which demonstrates that LoRA fine-tuning can match full fine-tuning performance while maintaining modularity and avoiding catastrophic forgetting. We apply these principles specifically to the weather forecasting domain, exploring the intersection of structured numerical data and natural language generation.
 
 **Key Research Questions:**
+
 - Can LoRA effectively adapt LLMs to meteorological language and concepts?
 - How does numerical → text mapping perform with frozen base weights?
 - What reward signals optimize weather forecast accuracy via RLHF?
@@ -121,21 +127,27 @@ sequenceDiagram
 ## 🔬 Research Implementation Details
 
 ### Phase 1: Supervised Fine-Tuning (SFT)
+
 Following **Schulman et al. (2025) Section 2-3**:
+
 - ✅ **Frozen base weights**: Only LoRA adapters are updated during training
 - ✅ **All linear layers**: Adapters applied to attention + MLP layers (not just attention)
 - ✅ **10× LR scaling**: LoRA learning rate ≈ 10× full fine-tuning rate (5e-5 vs 5e-6)
 - ✅ **Rank optimization**: r=32, α=32 for optimal performance-efficiency trade-off
 
 ### Phase 2: Reinforcement Learning from Human Feedback (RLHF)
+
 Following **Schulman et al. (2025) Section 4-5**:
+
 - ✅ **KL regularization**: Explicit KL penalty to prevent policy drift
 - ✅ **Moderate batch sizes**: 8-32 samples for LoRA stability
 - ✅ **Composite rewards**: Accuracy (0.7) + Style (0.2) + Calibration (0.1)
 - ✅ **Value head integration**: Joint training of LoRA adapters + value function
 
 ### Evaluation Framework
+
 Multi-dimensional assessment following meteorological standards:
+
 - **Accuracy Metrics**: Categorical prediction accuracy, MAE for continuous variables
 - **Calibration**: Brier score, reliability diagrams for probability forecasts
 - **Linguistic Quality**: BLEU/ROUGE scores vs human-written forecasts
@@ -333,6 +345,7 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 - **Data contributions** - New weather sources and datasets
 
 ### Quick Contributing Steps
+
 1. Fork the repository
 2. Create feature branch (`git checkout -b feature/amazing-feature`)
 3. Follow our [coding standards](CONTRIBUTING.md#coding-standards)
@@ -350,12 +363,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 This research builds upon foundational work in parameter-efficient fine-tuning and reinforcement learning from human feedback:
 
 ### Primary Inspiration
+
 - **Schulman, J. & Thinking Machines Lab** (2025). *LoRA Without Regret*. Thinking Machines Lab: Connectionism. [DOI: 10.64434/tml.20250929](https://thinkingmachines.ai/blog/lora/)
   - Core methodology for LoRA stability and scaling
   - "Low regret" principle for modular fine-tuning
   - Learning rate scaling and KL regularization strategies
 
 ### Foundational Papers
+
 - **Hu, E. J., et al.** (2021). *LoRA: Low-Rank Adaptation of Large Language Models*. arXiv:2106.09685
   - Original LoRA formulation and mathematical framework
 - **Schulman, J., et al.** (2017). *Proximal Policy Optimization Algorithms*. arXiv:1707.06347
@@ -364,12 +379,14 @@ This research builds upon foundational work in parameter-efficient fine-tuning a
   - RLHF methodology and best practices
 
 ### Technical Infrastructure
+
 - **Hugging Face Team** - [Transformers](https://github.com/huggingface/transformers), [PEFT](https://github.com/huggingface/peft), [TRL](https://github.com/huggingface/trl) libraries
 - **PyTorch Team** - Deep learning framework and ecosystem
 - **European Centre for Medium-Range Weather Forecasts (ECMWF)** - [ERA5 reanalysis data](https://cds.climate.copernicus.eu/)
 - **Open-Meteo** - [Weather API services](https://open-meteo.com/) and real-time data
 
 ### Research Community
+
 Special thanks to the broader NLP and weather prediction communities for open datasets, evaluation metrics, and methodological insights.
 
 ---
@@ -381,7 +398,7 @@ If you use this work in your research, please cite:
 ```bibtex
 @misc{weather_lora_2025,
   title={Weather Forecasting with LoRA Fine-tuning: A Research Implementation},
-  author={[Your Name]},
+  author={Ashioya Jotham Victor},
   year={2025},
   howpublished={\url{https://github.com/ashioyajotham/weather_forecasting_lora}},
   note={Implementation following Schulman et al. (2025) LoRA Without Regret methodology}
