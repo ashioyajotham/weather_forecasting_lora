@@ -1,0 +1,112 @@
+# SFT (Supervised Fine-Tuning) Configuration for Weather LoRA
+# Following Schulman et al. (2025) methodology
+
+# Model Configuration
+model:
+  base_model: "microsoft/Mistral-7B-v0.1"
+  quantization: true
+  device_map: "auto"
+
+# LoRA Configuration (Schulman recommendations)
+lora:
+  r: 32                    # Rank (16-64 range, 32 optimal)
+  alpha: 32               # Alpha scaling = 32 
+  dropout: 0.05           # Light dropout for stability
+  bias: "none"            # No bias adaptation
+  task_type: "CAUSAL_LM"
+  
+  # All linear layers (Schulman Sec. 2.2: critical for performance)
+  target_modules:
+    - "q_proj"      # Query projection
+    - "k_proj"      # Key projection
+    - "v_proj"      # Value projection  
+    - "o_proj"      # Output projection
+    - "gate_proj"   # Gate projection (MLP)
+    - "up_proj"     # Up projection (MLP)
+    - "down_proj"   # Down projection (MLP)
+
+# Training Configuration
+training:
+  output_dir: "./models/weather-lora-sft"
+  logging_dir: "./logs/sft"
+  run_name: "weather-lora-sft"
+  
+  # Learning rate scaling (Schulman Sec. 3.1)
+  learning_rate: 5e-5     # 10x higher than typical FullFT (5e-6)
+  warmup_ratio: 0.05      # 5% warmup
+  weight_decay: 0.01      # L2 regularization
+  
+  # Batch size (Schulman Sec. 4.2: moderate for stability)
+  per_device_train_batch_size: 4
+  per_device_eval_batch_size: 8
+  gradient_accumulation_steps: 8    # Effective batch = 32
+  
+  # Training duration
+  num_train_epochs: 3
+  max_steps: -1           # Use epochs instead
+  
+  # Evaluation & saving
+  eval_strategy: "steps"
+  eval_steps: 500
+  save_strategy: "steps" 
+  save_steps: 1000
+  logging_steps: 100
+  save_total_limit: 3
+  load_best_model_at_end: true
+  metric_for_best_model: "eval_loss"
+  greater_is_better: false
+  
+  # Optimization
+  optim: "adamw_torch"
+  adam_beta1: 0.9
+  adam_beta2: 0.999
+  adam_epsilon: 1e-8
+  max_grad_norm: 1.0
+  lr_scheduler_type: "cosine"
+  
+  # Performance
+  fp16: true
+  gradient_checkpointing: true
+  dataloader_pin_memory: true
+  dataloader_num_workers: 4
+  remove_unused_columns: false
+  ddp_find_unused_parameters: false
+  
+  # Monitoring
+  report_to: ["tensorboard"]
+  
+  # Reproducibility
+  seed: 42
+
+# Data Configuration
+data:
+  max_length: 512
+  truncation: true
+  padding: "max_length"
+  
+  # Dataset paths
+  train_path: "data/processed/train.json"
+  val_path: "data/processed/val.json"
+  test_path: "data/processed/test.json"
+
+# Evaluation Configuration
+evaluation:
+  # Metrics to compute
+  metrics: ["perplexity", "bleu", "rouge"]
+  
+  # Generation parameters for evaluation
+  generation:
+    max_new_tokens: 128
+    temperature: 0.7
+    do_sample: true
+    top_p: 0.9
+    top_k: 50
+
+# Hardware Configuration
+hardware:
+  # Memory optimization
+  gradient_checkpointing: true
+  use_cache: false
+  
+  # Multi-GPU (if available)
+  dataloader_pin_memory: true

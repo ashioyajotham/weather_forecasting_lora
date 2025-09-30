@@ -1,0 +1,112 @@
+# PPO Configuration for Weather Forecasting LoRA
+# Following Schulman et al. (2025) methodology for stable RLHF
+
+# PPO Configuration (Schulman Sec. 4.1: stability recommendations)
+ppo:
+  # Batch size (Schulman Sec. 4.2: moderate for LoRA stability)
+  batch_size: 8
+  forward_batch_size: 4
+  mini_batch_size: 4
+  gradient_accumulation_steps: 1
+  
+  # Learning rate (smaller than SFT for stability)
+  learning_rate: 1e-5        # Much smaller than SFT 5e-5
+  
+  # PPO specific parameters
+  ppo_epochs: 4              # Number of PPO epochs per batch
+  cliprange: 0.2             # PPO clipping range
+  vf_coef: 0.1              # Value function coefficient
+  ent_coef: 0.01            # Entropy coefficient for exploration
+  
+  # KL regularization (Schulman Sec. 4.1: critical for LoRA)
+  kl_penalty: "kl"          # Use KL penalty
+  init_kl_coef: 0.1         # Initial KL coefficient
+  target_kl: 0.1            # Target KL divergence
+  kl_beta: 0.1              # KL beta for adaptive penalty
+  
+  # Gradient clipping
+  max_grad_norm: 1.0
+  
+  # Training duration
+  num_epochs: 3
+  save_every: 100           # Save checkpoint every N steps
+  log_every: 10             # Log statistics every N steps
+  
+  # Reproducibility
+  seed: 42
+
+# Reward Model Configuration
+reward_model:
+  # Reward component weights (must sum to 1.0)
+  accuracy_weight: 0.4      # Factual accuracy vs observed weather
+  style_weight: 0.2         # Readability and professional style
+  calibration_weight: 0.2   # Appropriate confidence levels
+  consistency_weight: 0.2   # Internal logical consistency
+  
+  # Reward thresholds
+  min_reward: -1.0          # Minimum reward (for very bad forecasts)
+  max_reward: 1.0           # Maximum reward
+  
+  # Temperature and wind error tolerances
+  temp_tolerance: 3.0       # °C tolerance for temperature accuracy
+  wind_tolerance: 5.0       # km/h tolerance for wind speed
+
+# Generation Configuration
+generation:
+  max_new_tokens: 128       # Maximum tokens to generate
+  temperature: 0.7          # Sampling temperature
+  top_p: 0.9               # Nucleus sampling
+  top_k: 50                # Top-k sampling
+  do_sample: true          # Enable sampling
+  repetition_penalty: 1.1   # Reduce repetition
+
+# Model Configuration
+model:
+  base_model_path: "./models/weather-lora-sft"  # SFT model path
+  output_dir: "./models/weather-lora-ppo"       # PPO output directory
+  device_map: "auto"
+  torch_dtype: "float16"
+
+# Data Configuration
+data:
+  # Training data for PPO
+  train_path: "data/processed/train.json"
+  
+  # Observed weather data for reward calculation
+  observed_weather_path: "data/processed/observed_weather.json"
+  
+  # Maximum samples per epoch (for faster iteration)
+  max_samples_per_epoch: 1000
+
+# Evaluation Configuration
+evaluation:
+  # Evaluate every N steps
+  eval_every: 50
+  
+  # Number of samples for evaluation
+  eval_samples: 100
+  
+  # Metrics to track during training
+  track_metrics: ["reward", "kl_divergence", "policy_loss", "value_loss"]
+
+# Logging Configuration
+logging:
+  log_level: "INFO"
+  log_dir: "./logs/ppo"
+  
+  # Tensorboard logging
+  use_tensorboard: true
+  
+  # Weights & Biases (optional)
+  use_wandb: false
+  wandb_project: "weather-lora-ppo"
+  
+# Hardware Configuration
+hardware:
+  # Memory optimization
+  gradient_checkpointing: true
+  use_cache: false
+  
+  # Multi-GPU settings (if available)
+  dataloader_num_workers: 2
+  dataloader_pin_memory: true
