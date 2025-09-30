@@ -10,8 +10,6 @@ __pycache__/
 .env
 # Logs
 *.log
-# Data files
-data/
 # Model checkpoints
 checkpoints/
 # VSCode settings
