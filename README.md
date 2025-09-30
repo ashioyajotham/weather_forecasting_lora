@@ -11,6 +11,11 @@
 
 A comprehensive research implementation of weather forecasting using LoRA (Low-Rank Adaptation) fine-tuning on Large Language Models, following the groundbreaking methodology from Schulman et al. (2025) "LoRA Without Regret".
 
+> *"Inspiration is perishable — act on it immediately."*  
+> **— Naval Ravikant**
+>
+> This project embodies the principle of acting on inspiration. When the idea struck to combine Schulman et al.'s LoRA methodology with weather forecasting, I built it immediately — transforming numerical weather data into natural language through state-of-the-art parameter-efficient fine-tuning.
+
 ## 🌤️ Project Overview
 
 This project transforms numerical weather data into natural language forecasts using state-of-the-art LoRA fine-tuning techniques. It implements a complete pipeline from data collection to deployment, following the "LoRA Without Regret" methodology from [Schulman et al. (2025)](https://thinkingmachines.ai/blog/lora/).
@@ -18,6 +23,9 @@ This project transforms numerical weather data into natural language forecasts u
 ## 🔬 Research Context
 
 This work builds upon the seminal paper **"LoRA Without Regret"** by John Schulman and the Thinking Machines Lab, which demonstrates that LoRA fine-tuning can match full fine-tuning performance while maintaining modularity and avoiding catastrophic forgetting. We apply these principles specifically to the weather forecasting domain, exploring the intersection of structured numerical data and natural language generation.
+
+**Inspiration & Philosophy:**
+The project philosophy aligns with Naval Ravikant's wisdom on [acting on inspiration immediately](https://youtu.be/L9TPErhdR4w?si=YZHo9SNWxDrLjzf0) — when breakthrough ideas emerge, they must be implemented before the spark fades.
 
 **Key Research Questions:**
 
