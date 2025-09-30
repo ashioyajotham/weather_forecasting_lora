@@ -315,18 +315,31 @@ pytest tests/test_evaluation.py
 
 ## 📚 Documentation
 
-- [API Reference](docs/api.md)
-- [Training Guide](docs/training.md)
-- [Deployment Guide](docs/deployment.md)
+- [Getting Started Guide](GETTING_STARTED.md) - Complete setup and usage guide
+- [Contributing Guidelines](CONTRIBUTING.md) - How to contribute to the project
+- [Project Status](PROJECT_STATUS.md) - Implementation status and roadmap
+- [API Reference](docs/api.md) - Detailed API documentation
+- [Training Guide](docs/training.md) - Training methodology and best practices
+- [Deployment Guide](docs/deployment.md) - Production deployment instructions
 - [Contributing Guidelines](docs/contributing.md)
 
 ## 🤝 Contributing
 
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for detailed information on:
+
+- **Research contributions** - Methodology improvements and experiments
+- **Technical contributions** - Bug fixes and feature enhancements  
+- **Documentation** - Tutorials, examples, and guides
+- **Data contributions** - New weather sources and datasets
+
+### Quick Contributing Steps
 1. Fork the repository
 2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Follow our [coding standards](CONTRIBUTING.md#coding-standards)
+4. Add tests and documentation
+5. Submit a Pull Request
+
+For detailed guidelines, development setup, and research contribution standards, please read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## 📄 License
 
@@ -382,6 +395,3 @@ If you use this work in your research, please cite:
   note = {\url{https://thinkingmachines.ai/blog/lora/}},
   doi = {10.64434/tml.20250929},
 }
-```
- 
- 
