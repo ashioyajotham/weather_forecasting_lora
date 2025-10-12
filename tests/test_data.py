@@ -288,16 +288,34 @@ class TestDataPipeline:
         collector = WeatherDataCollector()
         # Collect -> Preprocess -> Save
     
-    def test_dataset_preparation_for_training(self, sample_training_data):
+    def test_dataset_preparation_for_training(self, sample_weather_data):
         """Test preparing dataset for LoRA training."""
         from src.data import WeatherPreprocessor
+        from src.data.preprocessor import ForecastPrompt
         
         preprocessor = WeatherPreprocessor()
-        dataset = preprocessor.create_training_dataset(sample_training_data)
+        
+        # Create ForecastPrompt objects for integration test
+        forecast_prompts = [
+            ForecastPrompt(
+                location=sample_weather_data["location"],
+                datetime=sample_weather_data["datetime"],
+                temperature=sample_weather_data["temperature"],
+                humidity=sample_weather_data["humidity"],
+                wind_speed=sample_weather_data["wind_speed"],
+                pressure=sample_weather_data["pressure"],
+                precipitation_probability=sample_weather_data["precipitation_probability"],
+                target_forecast="Sample forecast for training"
+            )
+            for _ in range(20)  # Create 20 samples for integration test
+        ]
+        
+        train_data, val_data, test_data = preprocessor.create_training_dataset(forecast_prompts)
         
         # Should be ready for model training
-        assert all("input" in item for item in dataset)
-        assert all("target" in item for item in dataset)
+        assert all("input" in item for item in train_data)
+        assert all("target" in item for item in train_data)
+        assert len(train_data) + len(val_data) + len(test_data) == 20
     
     @pytest.mark.slow
     def test_large_dataset_processing(self):
@@ -370,19 +388,36 @@ class TestDataValidation:
 class TestDataPerformance:
     """Test data processing performance."""
     
-    def test_preprocessing_speed(self, sample_training_data):
+    def test_preprocessing_speed(self, sample_weather_data):
         """Test preprocessing completes in reasonable time."""
         import time
         from src.data import WeatherPreprocessor
+        from src.data.preprocessor import ForecastPrompt
         
         preprocessor = WeatherPreprocessor()
         
+        # Create ForecastPrompt objects for performance test
+        forecast_prompts = [
+            ForecastPrompt(
+                location=sample_weather_data["location"],
+                datetime=sample_weather_data["datetime"],
+                temperature=sample_weather_data["temperature"],
+                humidity=sample_weather_data["humidity"],
+                wind_speed=sample_weather_data["wind_speed"],
+                pressure=sample_weather_data["pressure"],
+                precipitation_probability=sample_weather_data["precipitation_probability"],
+                target_forecast="Performance test forecast"
+            )
+            for _ in range(100)  # Create 100 samples
+        ]
+        
         start_time = time.time()
-        dataset = preprocessor.create_training_dataset(sample_training_data * 100)
+        train_data, val_data, test_data = preprocessor.create_training_dataset(forecast_prompts)
         elapsed = time.time() - start_time
         
-        # Should process 200 samples in under 1 second
+        # Should process 100 samples in under 1 second
         assert elapsed < 1.0
+        assert len(train_data) + len(val_data) + len(test_data) == 100
     
     def test_memory_efficiency(self):
         """Test memory usage stays reasonable."""

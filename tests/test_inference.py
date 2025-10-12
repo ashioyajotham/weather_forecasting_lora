@@ -193,9 +193,9 @@ class TestForecastAPI:
         # assert api is not None
     
     @pytest.mark.asyncio
-    async def test_api_forecast_endpoint(self):
+    def test_api_forecast_endpoint(self):
         """Test forecast API endpoint."""
-        pytest.skip("Requires API server")
+        pytest.skip("Requires API server and pytest-asyncio plugin")
         
         # Make request to /forecast endpoint
         # Verify response format

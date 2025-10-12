@@ -589,6 +589,6 @@ Addition: **lightweight evaluation dashboard** (metrics \+ plots you can track w
   title \= {LoRA Without Regret},  
   journal \= {Thinking Machines Lab: Connectionism},  
   year \= {2025},  
-  note \= {https://thinkingmachines.ai/blog/lora/},  
+  note \= {<https://thinkingmachines.ai/blog/lora/}>,  
   doi \= {10.64434/tml.20250929},  
 }
