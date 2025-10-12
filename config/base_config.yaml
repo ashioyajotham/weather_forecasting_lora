@@ -3,7 +3,7 @@
 
 # Model Configuration
 model:
-  base_model: "microsoft/Mistral-7B-v0.1"  # Alternative: "meta-llama/Meta-Llama-3-8B-Instruct"
+  base_model: "mistralai/Mistral-7B-v0.1"  # Alternative: "meta-llama/Meta-Llama-3-8B-Instruct"
   model_type: "causal_lm"
   device_map: "auto"
   torch_dtype: "float16"
@@ -94,7 +94,57 @@ output:
   output_dir: "./models/weather-lora-sft"
   logging_dir: "./logs"
   run_name: "weather-lora-sft"
-  report_to: ["tensorboard"]  # Can add "wandb" if configured
+  report_to: ["tensorboard", "wandb"]  # Integrated W&B tracking
+
+# Weights & Biases Configuration
+wandb:
+  # Project settings
+  project: "weather-forecasting-lora"
+  entity: ashioyajotham
+  name: null                # Run name (auto-generated if null)
+  group: "sft-experiments"  # Group related runs
+  tags: 
+    - "lora"
+    - "weather-forecasting"
+    - "schulman-2025"
+  notes: "Weather forecasting with LoRA following Schulman et al. (2025)"
+  
+  # Logging configuration
+  log_model: "checkpoint"   # Options: false, "checkpoint", "end"
+  log_freq: 100             # Log metrics every N steps
+  log_gradients: true       # Log gradient statistics
+  log_parameters: true      # Log parameter statistics
+  
+  # What to track
+  watch_model: true         # Track model architecture
+  watch_freq: 1000          # How often to log gradients/parameters
+  
+  # Artifacts
+  save_code: true           # Save code snapshot
+  log_artifacts: true       # Save model checkpoints as artifacts
+  artifact_type: "model"    # Artifact type for models
+  
+  # Evaluation tracking
+  log_predictions: true     # Log sample predictions during eval
+  num_predictions: 10       # Number of predictions to log
+  
+  # Custom metrics
+  custom_metrics:
+    - "bleu_score"
+    - "rouge_1_f"
+    - "rouge_2_f"
+    - "rouge_l_f"
+    - "temperature_mae"
+    - "temperature_accuracy"
+    - "wind_speed_mae"
+    - "precipitation_accuracy"
+  
+  # Performance tracking
+  log_system_metrics: true  # Track GPU/CPU/memory
+  
+  # Reinit settings
+  reinit: true              # Allow multiple runs in same process
+  resume: "allow"           # Resume runs if id matches
   
 # Hardware Configuration
 hardware:

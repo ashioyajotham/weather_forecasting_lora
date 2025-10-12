@@ -1,6 +1,6 @@
 # MIT License
 
-Copyright (c) 2025 Weather Forecasting LoRA Project
+Copyright (c) 2025 Ashioya Jotham Victor
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -30,8 +30,11 @@ Schulman, J. & Thinking Machines Lab (2025). "LoRA Without Regret".
 Thinking Machines Lab: Connectionism. DOI: 10.64434/tml.20250929
 Available at: <https://thinkingmachines.ai/blog/lora/>
 
-Users of this software should appropriately cite the original research
-when publishing academic work or derivative research based on this
-implementation.
+Users of this software should appropriately cite both:
+
+1. This implementation (Ashioya Jotham Victor, 2025)
+2. The original LoRA methodology (Schulman et al., 2025)
+
+See README.md for citation formats and research acknowledgments.
 
 ---

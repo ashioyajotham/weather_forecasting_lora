@@ -1,29 +1,144 @@
 # Virtual environment
 venv/
+env/
+ENV/
+.venv/
+
 # Python cache
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
+
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints
+*.ipynb_checkpoints/
+
 # Environment variables
 .env
+.env.local
+.env.*.local
+
 # Logs
 *.log
-# Model checkpoints
+logs/
+*.log.*
+
+# Model checkpoints and weights (HEAVY FILES)
 checkpoints/
+models/
+*.pth
+*.pt
+*.bin
+*.safetensors
+*.ckpt
+*.h5
+*.pkl
+*.pickle
+*.model
+*.weights
+*.onnx
+
+# LoRA adapters and fine-tuned models
+adapters/
+lora_adapters/
+fine_tuned/
+trained_models/
+model_outputs/
+
+# Training artifacts
+output/
+outputs/
+runs/
+wandb/
+tensorboard_logs/
+lightning_logs/
+
+# Large datasets (keep structure, ignore data)
+data/raw/*.csv
+data/raw/*.json
+data/raw/*.parquet
+data/processed/*.csv
+data/processed/*.json
+data/processed/*.parquet
+data/cache/
+*.cache
+*.arrow
+*.feather
+
+# Hugging Face cache
+.cache/
+transformers_cache/
+huggingface/
+*.lock
+
 # VSCode settings
 .vscode/
+*.code-workspace
+
 # MacOS files
 .DS_Store
+._*
+
 # Windows files
 Thumbs.db
+desktop.ini
+
 # Ignore other IDEs
 .idea/
 *.sublime-project
 *.sublime-workspace
-# Ignore compiled files
+*.swp
+*.swo
+*~
+
+# Compiled files
 *.so
 *.dylib
 *.dll
 *.exe
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# pytest cache
+.pytest_cache/
+.tox/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+
+# W&B artifacts (keep metadata, ignore large files)
+wandb/run-*/files/
+wandb/artifacts/
+wandb/offline-run-*/
+
+# Keep important configuration and documentation
+!config/
+!docs/
+!tests/
+!src/
+!*.md
+!*.txt
+!*.yaml
+!*.yml
+!requirements.txt
+!LICENSE
+
+# Keep small sample data for testing
+!data/samples/
+!data/examples/

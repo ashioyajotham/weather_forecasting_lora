@@ -20,6 +20,9 @@ import json
 import re
 from datetime import datetime
 
+# W&B integration
+from src.utils.wandb_logger import WandBLogger
+
 # Text evaluation metrics
 try:
     from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
@@ -509,19 +512,27 @@ class WeatherEvaluator:
     High-level evaluator for weather forecasting models.
     
     Provides complete evaluation pipeline including data preparation,
-    metric calculation, and reporting.
+    metric calculation, reporting, and W&B logging.
     """
     
-    def __init__(self):
-        """Initialize weather evaluator."""
+    def __init__(self, wandb_logger: Optional[WandBLogger] = None):
+        """
+        Initialize weather evaluator.
+        
+        Args:
+            wandb_logger: Optional W&B logger for experiment tracking
+        """
         self.calculator = MetricsCalculator()
+        self.wandb_logger = wandb_logger
         logger.info("WeatherEvaluator initialized")
     
     def evaluate_model(
         self,
         model,
         test_dataset: List[Dict],
-        num_samples: Optional[int] = None
+        num_samples: Optional[int] = None,
+        step: Optional[int] = None,
+        log_to_wandb: bool = True,
     ) -> EvaluationMetrics:
         """
         Evaluate a weather forecasting model on test data.
@@ -530,6 +541,8 @@ class WeatherEvaluator:
             model: Trained weather forecasting model
             test_dataset: Test dataset
             num_samples: Number of samples to evaluate (None for all)
+            step: Training step for W&B logging
+            log_to_wandb: Whether to log results to W&B
             
         Returns:
             EvaluationMetrics object
@@ -541,6 +554,9 @@ class WeatherEvaluator:
             test_dataset = test_dataset[:num_samples]
         
         predictions = []
+        generated_texts = []
+        reference_texts = []
+        input_prompts = []
         
         for i, example in enumerate(test_dataset):
             try:
@@ -561,6 +577,9 @@ class WeatherEvaluator:
                 )
                 
                 predictions.append(prediction)
+                generated_texts.append(generated_forecast)
+                reference_texts.append(example['target'])
+                input_prompts.append(example['input'])
                 
                 if (i + 1) % 10 == 0:
                     logger.info(f"Generated {i + 1}/{len(test_dataset)} forecasts")
@@ -572,8 +591,88 @@ class WeatherEvaluator:
         # Calculate metrics
         metrics = self.calculator.calculate_all_metrics(predictions)
         
+        # Log to W&B if enabled
+        if log_to_wandb and self.wandb_logger and self.wandb_logger.is_initialized:
+            self._log_metrics_to_wandb(
+                metrics=metrics,
+                step=step,
+                predictions=generated_texts[:10],  # First 10 samples
+                references=reference_texts[:10],
+                inputs=input_prompts[:10]
+            )
+        
         logger.info("Evaluation completed")
         return metrics
+    
+    def _log_metrics_to_wandb(
+        self,
+        metrics: EvaluationMetrics,
+        step: Optional[int],
+        predictions: List[str],
+        references: List[str],
+        inputs: List[str]
+    ):
+        """
+        Log evaluation metrics to W&B.
+        
+        Args:
+            metrics: Computed evaluation metrics
+            step: Training step
+            predictions: Sample predictions
+            references: Sample references
+            inputs: Sample input prompts
+        """
+        if not self.wandb_logger:
+            return
+        
+        # Log NLG metrics (BLEU, ROUGE)
+        self.wandb_logger.log_nlg_metrics(
+            bleu_score=metrics.bleu_score,
+            rouge_1_f=metrics.rouge_1_f,
+            rouge_2_f=metrics.rouge_2_f,
+            rouge_l_f=metrics.rouge_l_f,
+            step=step or 0
+        )
+        
+        # Log weather-specific metrics
+        self.wandb_logger.log_weather_metrics(
+            temperature_mae=metrics.temperature_mae,
+            temperature_accuracy=metrics.temperature_accuracy,
+            wind_speed_mae=metrics.wind_speed_mae,
+            precipitation_accuracy=metrics.rain_accuracy,
+            step=step or 0,
+            categorical_accuracy=metrics.categorical_accuracy,
+        )
+        
+        # Log style and overall metrics
+        self.wandb_logger.log_evaluation_metrics(
+            metrics={
+                'readability_score': metrics.readability_score,
+                'length_similarity': metrics.length_similarity,
+                'vocabulary_diversity': metrics.vocabulary_diversity,
+                'overall_score': metrics.overall_score,
+                'confidence_interval_low': metrics.confidence_interval[0],
+                'confidence_interval_high': metrics.confidence_interval[1],
+            },
+            step=step or 0,
+            prefix='eval'
+        )
+        
+        # Log sample predictions
+        if self.wandb_logger.config.get('log_predictions', True):
+            num_to_log = min(
+                self.wandb_logger.config.get('num_predictions', 10),
+                len(predictions)
+            )
+            self.wandb_logger.log_predictions(
+                predictions=predictions[:num_to_log],
+                references=references[:num_to_log],
+                inputs=inputs[:num_to_log],
+                step=step,
+                num_samples=num_to_log
+            )
+        
+        logger.info(f"✅ Logged evaluation metrics to W&B (step={step})")
     
     def create_evaluation_report(
         self,

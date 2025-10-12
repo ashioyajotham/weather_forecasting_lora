@@ -28,6 +28,9 @@ from typing import Dict, List, Optional, Union
 import yaml
 from pathlib import Path
 
+# W&B integration
+from src.utils.wandb_logger import WandBLogger, WandBCallback
+
 logger = logging.getLogger(__name__)
 
 
@@ -381,21 +384,42 @@ class LoRATrainer:
     High-level trainer class for weather forecasting LoRA models.
 
     Handles the complete training pipeline with proper configurations
-    following Schulman et al. methodology.
+    following Schulman et al. methodology, including W&B experiment tracking.
     """
 
-    def __init__(self, model: WeatherForecasterLoRA, config_path: Optional[str] = None):
+    def __init__(
+        self,
+        model: WeatherForecasterLoRA,
+        config_path: Optional[str] = None,
+        use_wandb: bool = True,
+        wandb_project: Optional[str] = None,
+        wandb_run_name: Optional[str] = None,
+    ):
         """
         Initialize LoRA trainer.
 
         Args:
             model: WeatherForecasterLoRA instance
             config_path: Path to configuration file
+            use_wandb: Whether to use W&B logging
+            wandb_project: W&B project name (overrides config)
+            wandb_run_name: W&B run name (overrides config)
         """
         self.model = model
         self.config_path = config_path
         self.trainer = None
-
+        self.use_wandb = use_wandb
+        
+        # Initialize W&B logger if enabled
+        self.wandb_logger = None
+        if self.use_wandb:
+            self.wandb_logger = WandBLogger(
+                config_path=config_path,
+                project=wandb_project,
+                name=wandb_run_name,
+            )
+            logger.info("W&B logging enabled")
+        
         logger.info("LoRATrainer initialized")
 
     def train(
@@ -405,7 +429,7 @@ class LoRATrainer:
         output_dir: str = "./models/weather-lora-sft",
     ):
         """
-        Complete training pipeline.
+        Complete training pipeline with W&B tracking.
 
         Args:
             train_dataset: Training data
@@ -418,6 +442,36 @@ class LoRATrainer:
         if self.model.peft_model is None:
             self.model.load_model()
 
+        # Initialize W&B run if enabled
+        if self.use_wandb and self.wandb_logger:
+            # Load full config for W&B
+            full_config = {}
+            if self.config_path and Path(self.config_path).exists():
+                with open(self.config_path, 'r') as f:
+                    full_config = yaml.safe_load(f)
+            
+            # Add training metadata
+            full_config.update({
+                'base_model': self.model.base_model_name,
+                'lora_r': self.model.lora_config['r'],
+                'lora_alpha': self.model.lora_config['alpha'],
+                'train_samples': len(train_dataset),
+                'eval_samples': len(eval_dataset) if eval_dataset else 0,
+                'quantization': self.model.quantization,
+                'methodology': 'Schulman et al. (2025)',
+            })
+            
+            # Initialize W&B
+            self.wandb_logger.init(config=full_config)
+            
+            # Watch model for gradient/parameter tracking
+            if self.model.peft_model:
+                self.wandb_logger.watch_model(
+                    self.model.peft_model,
+                    log_freq=self.wandb_logger.config.get('watch_freq', 1000),
+                    log='all' if self.wandb_logger.config.get('log_gradients', True) else 'parameters'
+                )
+
         # Prepare datasets
         train_hf_dataset = self.model.prepare_dataset(train_dataset)
         eval_hf_dataset = None
@@ -429,22 +483,46 @@ class LoRATrainer:
             output_dir=output_dir, config_path=self.config_path
         )
 
-        # Create trainer
+        # Create trainer with W&B callback if enabled
         self.trainer = self.model.get_trainer(
             train_dataset=train_hf_dataset,
             eval_dataset=eval_hf_dataset,
             training_args=training_args,
         )
+        
+        # Add W&B callback
+        if self.use_wandb and self.wandb_logger:
+            wandb_callback = WandBCallback(self.wandb_logger)
+            self.trainer.add_callback(wandb_callback)
+            logger.info("W&B callback added to trainer")
 
         # Start training
         logger.info("🚀 Starting LoRA fine-tuning...")
-        self.trainer.train()
+        train_result = self.trainer.train()
 
         # Save model
         self.model.save_model(output_dir)
+        
+        # Log final model artifact to W&B
+        if self.use_wandb and self.wandb_logger:
+            if self.wandb_logger.config.get('log_artifacts', True):
+                self.wandb_logger.log_model_artifact(
+                    model_path=output_dir,
+                    artifact_name='weather-lora-final',
+                    aliases=['final', 'best'],
+                    metadata={
+                        'final_loss': train_result.training_loss,
+                        'epochs': training_args.num_train_epochs,
+                        'base_model': self.model.base_model_name,
+                    }
+                )
 
         logger.info("✅ Training completed successfully!")
         logger.info(f"Model saved to: {output_dir}")
+        
+        # Finish W&B run
+        if self.use_wandb and self.wandb_logger:
+            self.wandb_logger.finish()
 
         return self.trainer.state.log_history
 
