@@ -21,13 +21,12 @@ Architecture:
 from .data import WeatherDataCollector, WeatherPreprocessor
 from .models import WeatherForecasterLoRA, LoRATrainer
 from .evaluation import WeatherEvaluator, MetricsCalculator
-from .rl import PPOTrainerWeather, RewardModel
+from .rl import PPOTrainerWeather, WeatherRewardModel
 from .inference import WeatherInference, ForecastAPI
-from .utils import ConfigManager, Logger
 
 __version__ = "1.0.0"
-__author__ = "Weather Forecasting Team"
-__email__ = "team@weatherlora.ai"
+__author__ = "Ashioya Jotham Victor"
+__email__ = "victorashioya960@gmail.com"
 
 __all__ = [
     "WeatherDataCollector",
@@ -37,9 +36,7 @@ __all__ = [
     "WeatherEvaluator",
     "MetricsCalculator",
     "PPOTrainerWeather",
-    "RewardModel",
+    "WeatherRewardModel",
     "WeatherInference",
     "ForecastAPI",
-    "ConfigManager",
-    "Logger"
 ]

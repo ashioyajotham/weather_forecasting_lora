@@ -103,10 +103,6 @@ addopts = [
     "--strict-markers",
     "--strict-config",
     "--verbose",
-    "--cov=src",
-    "--cov-report=term-missing",
-    "--cov-report=html",
-    "--cov-report=xml",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
@@ -114,6 +110,8 @@ markers = [
     "unit: marks tests as unit tests",
     "gpu: marks tests as requiring GPU",
     "api: marks tests as requiring external API access",
+    "performance: marks tests as performance benchmarks",
+    "asyncio: marks tests as async tests",
 ]
 
 [tool.coverage.run]
@@ -135,6 +133,6 @@ exclude_lines = [
     "raise NotImplementedError",
     "if 0:",
     "if __name__ == .__main__.:",
-    "class .*\bProtocol\):",
-    "@(abc\.)?abstractmethod",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
 ]

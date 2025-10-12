@@ -1,5 +1,5 @@
 # Virtual environment
-weather-lora-env/
+venv/
 # Python cache
 __pycache__/
 *.py[cod]

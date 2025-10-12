@@ -1,4 +1,6 @@
-Here is my training recipe for a weather forecasting is a super interesting domain for LoRA \+ freezing the base weights inspired by John Schulmann and Thinking Labs: [https://thinkingmachines.ai/blog/lora/](https://thinkingmachines.ai/blog/lora/)
+# Training Recipe for LoRA in Weather Forecasting
+
+Here is my training recipe for weather forecasting, a super interesting domain for LoRA \+ freezing the base weights inspired by John Schulmann and Thinking Labs: [https://thinkingmachines.ai/blog/lora/](https://thinkingmachines.ai/blog/lora/)
 
 I chose weather forecasting as It’s both *structured* (physical time series, numerical simulations, gridded data) and *textual* (forecast bulletins, summaries, warnings).
 
@@ -205,7 +207,7 @@ This builds on your supervised fine-tuned LoRA model (SFT baseline). Now we’ll
 
 ---
 
-# **🔧 RLHF with PPO \+ LoRA (Weather Forecasts)**
+## **🔧 RLHF with PPO \+ LoRA (Weather Forecasts)**
 
 We’ll use [TRL](https://github.com/huggingface/trl), Hugging Face’s RLHF toolkit.
 
@@ -333,7 +335,7 @@ model.save\_pretrained("./weather-lora-ppo-adapter")
 
 ---
 
-# **🔎 Key Design Choices**
+## **🔎 Key Design Choices**
 
 ### **Reward design (most critical\!)**
 
@@ -371,7 +373,7 @@ We could have a **reward model training loop** (so instead of hand-coded rules l
 
 A **traceability checklist** mapping your weather-forecast LoRA+RL pipeline back to **Schulman et al. (2025, *LoRA Without Regret*)** as it is the **core** of this project. Read more: [https://thinkingmachines.ai/blog/lora/](https://thinkingmachines.ai/blog/lora/)
 
-# **📑 Weather Forecast Training Recipe ↔ Schulman et al. (2025)**
+## **📑 Weather Forecast Training Recipe ↔ Schulman et al. (2025)**
 
 ### **Phase 1: SFT with LoRA**
 
@@ -443,7 +445,7 @@ A **traceability checklist** mapping your weather-forecast LoRA+RL pipeline back
 
 * Your pipeline: if weather forecasting task expands, you can still fall back to full FT.
 
-# **🗓 Training Schedule (Weather Forecast Domain)**
+## **🗓 Training Schedule (Weather Forecast Domain)**
 
 ### **Week 1 — Data Setup & Baseline**
 
