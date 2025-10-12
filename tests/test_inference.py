@@ -30,10 +30,10 @@ class TestForecastRequest:
         from src.data import WeatherLocation
         
         location = WeatherLocation("New York", 40.7128, -74.0060)
-        request = ForecastRequest(location=location, days_ahead=7)
+        request = ForecastRequest(location=location, forecast_horizon=6)
         
         assert request.location == location
-        assert request.days_ahead == 7
+        assert request.forecast_horizon == 6
     
     def test_request_validation(self):
         """Test request validation."""
@@ -52,16 +52,22 @@ class TestForecastResponse:
     
     def test_response_creation(self):
         """Test creating a forecast response."""
+        from datetime import datetime
+        
+        now = datetime.now()
+        valid_until = datetime.now()
+        
         response = ForecastResponse(
             forecast_text="Partly cloudy, 23°C",
-            confidence=0.85,
+            confidence_score=0.85,
             location="New York",
-            timestamp="2025-10-12T12:00:00",
+            generated_at=now,
+            valid_until=valid_until,
             model_version="1.0.0"
         )
         
         assert response.forecast_text is not None
-        assert 0.0 <= response.confidence <= 1.0
+        assert 0.0 <= response.confidence_score <= 1.0
         assert response.location == "New York"
 
 

@@ -1,4 +1,4 @@
-MIT License
+# MIT License
 
 Copyright (c) 2025 Weather Forecasting LoRA Project
 
@@ -26,10 +26,12 @@ RESEARCH ATTRIBUTION NOTICE:
 
 This project implements methodologies from the following research work:
 
-Schulman, J. & Thinking Machines Lab (2025). "LoRA Without Regret". 
+Schulman, J. & Thinking Machines Lab (2025). "LoRA Without Regret".
 Thinking Machines Lab: Connectionism. DOI: 10.64434/tml.20250929
-Available at: https://thinkingmachines.ai/blog/lora/
+Available at: <https://thinkingmachines.ai/blog/lora/>
 
-Users of this software should appropriately cite the original research 
-when publishing academic work or derivative research based on this 
+Users of this software should appropriately cite the original research
+when publishing academic work or derivative research based on this
 implementation.
+
+---

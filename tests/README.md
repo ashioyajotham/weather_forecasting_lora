@@ -4,7 +4,7 @@ Comprehensive test suite for the Weather Forecasting LoRA project, following res
 
 ## 📋 Test Structure
 
-```
+```tree
 tests/
 ├── __init__.py              # Test package configuration
 ├── conftest.py              # Pytest fixtures and configuration
@@ -18,11 +18,13 @@ tests/
 ## 🚀 Running Tests
 
 ### Run All Tests
+
 ```bash
 pytest tests/ -v
 ```
 
 ### Run Specific Test Files
+
 ```bash
 # Data tests
 pytest tests/test_data.py -v
@@ -38,6 +40,7 @@ pytest tests/test_inference.py -v
 ```
 
 ### Run by Test Markers
+
 ```bash
 # Run only unit tests
 pytest tests/ -m unit
@@ -56,6 +59,7 @@ pytest tests/ -m "not api"
 ```
 
 ### Run with Coverage
+
 ```bash
 # Generate coverage report
 pytest tests/ --cov=src --cov-report=html
@@ -81,6 +85,7 @@ start htmlcov/index.html  # Windows
 The test suite covers:
 
 ### Data Module (`test_data.py`)
+
 - ✅ Weather data collection from APIs
 - ✅ Data preprocessing and formatting
 - ✅ Numerical → text conversion
@@ -89,6 +94,7 @@ The test suite covers:
 - ✅ Caching mechanisms
 
 ### Models Module (`test_models.py`)
+
 - ✅ LoRA model initialization
 - ✅ Model configuration (Schulman et al. compliance)
 - ✅ Training pipeline execution
@@ -97,6 +103,7 @@ The test suite covers:
 - ✅ Memory and performance optimization
 
 ### Evaluation Module (`test_evaluation.py`)
+
 - ✅ BLEU/ROUGE metric calculation
 - ✅ Meteorological accuracy metrics
 - ✅ Rain prediction accuracy
@@ -105,6 +112,7 @@ The test suite covers:
 - ✅ Evaluation report generation
 
 ### Inference Module (`test_inference.py`)
+
 - ✅ Real-time inference
 - ✅ Batch processing
 - ✅ API integration
@@ -115,19 +123,25 @@ The test suite covers:
 ## 🧪 Test Categories
 
 ### Unit Tests (Fast)
+
 Test individual functions and classes in isolation:
+
 ```bash
 pytest tests/ -m unit --duration=10
 ```
 
 ### Integration Tests (Medium)
+
 Test complete workflows and component interactions:
+
 ```bash
 pytest tests/ -m integration
 ```
 
 ### Performance Tests (Slow)
+
 Benchmark performance and resource usage:
+
 ```bash
 pytest tests/ -m performance
 ```
@@ -135,6 +149,7 @@ pytest tests/ -m performance
 ## 📝 Writing New Tests
 
 ### Test Template
+
 ```python
 import pytest
 from src.your_module import YourClass
@@ -156,6 +171,7 @@ class TestYourClass:
 ```
 
 ### Using Fixtures
+
 ```python
 def test_with_fixtures(sample_weather_data, mock_lora_model):
     """Test using pytest fixtures."""
@@ -165,6 +181,7 @@ def test_with_fixtures(sample_weather_data, mock_lora_model):
 ```
 
 ### Parametrized Tests
+
 ```python
 @pytest.mark.parametrize("input,expected", [
     (10, 20),
@@ -191,6 +208,7 @@ Tests are automatically run in CI/CD pipeline:
 ## 📈 Test Metrics
 
 Target metrics for test suite:
+
 - **Coverage**: >80% code coverage
 - **Speed**: Unit tests <5 seconds total
 - **Reliability**: 100% pass rate on main branch
@@ -199,26 +217,31 @@ Target metrics for test suite:
 ## 🐛 Debugging Tests
 
 ### Run with verbose output
+
 ```bash
 pytest tests/ -vv
 ```
 
 ### Stop on first failure
+
 ```bash
 pytest tests/ -x
 ```
 
 ### Run specific test
+
 ```bash
 pytest tests/test_data.py::TestWeatherDataCollector::test_collector_initialization
 ```
 
 ### Show print statements
+
 ```bash
 pytest tests/ -s
 ```
 
 ### Debug with pdb
+
 ```bash
 pytest tests/ --pdb
 ```
@@ -232,6 +255,7 @@ pytest tests/ --pdb
 ## 🙏 Contributing Tests
 
 When adding new features:
+
 1. **Write tests first** (TDD approach)
 2. **Follow existing patterns** in test files
 3. **Add appropriate markers** (`@pytest.mark.unit`, etc.)

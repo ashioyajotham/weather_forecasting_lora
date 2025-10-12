@@ -643,7 +643,7 @@ Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         
         # Save report if path provided
         if output_path:
-            with open(output_path, 'w') as f:
+            with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(report)
             logger.info(f"Evaluation report saved to {output_path}")
         

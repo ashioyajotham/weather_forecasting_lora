@@ -86,7 +86,7 @@ Some strong public sources:
 
 **numerical → text mapping** is a sweet spot: LoRA lets you cheaply adapt an LLM to speak “weather,” while the frozen base model still provides general language fluency. Here’s a concrete training recipe:
 
-# **🔧 Training Recipe: Weather Numerical → Text Forecast with LoRA**
+## **🔧 Training Recipe: Weather Numerical → Text Forecast with LoRA**
 
 ### **1\. Base model**
 
