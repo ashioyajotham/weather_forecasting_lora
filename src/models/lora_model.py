@@ -114,15 +114,27 @@ class WeatherForecasterLoRA:
             )
 
         # Load base model
-        self.model = AutoModelForCausalLM.from_pretrained(
-            self.base_model_name,
-            quantization_config=quantization_config,
-            device_map=self.device_map,
-            trust_remote_code=True,
-            dtype=torch.float16,
-            use_safetensors=True,  # Explicitly use safetensors format
-            resume_download=True,  # Resume if download was interrupted
-        )
+        try:
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.base_model_name,
+                quantization_config=quantization_config,
+                device_map=self.device_map,
+                trust_remote_code=True,
+                dtype=torch.float16,
+                use_safetensors=True,  # Explicitly use safetensors format
+                local_files_only=False,  # Allow downloading from HF Hub
+            )
+        except OSError as e:
+            # If download fails, try without explicit safetensors preference
+            logger.warning(f"Failed to load with safetensors, trying default: {e}")
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.base_model_name,
+                quantization_config=quantization_config,
+                device_map=self.device_map,
+                trust_remote_code=True,
+                dtype=torch.float16,
+                local_files_only=False,
+            )
 
         # Prepare model for training if quantized
         if self.quantization:
