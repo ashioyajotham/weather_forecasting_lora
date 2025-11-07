@@ -119,7 +119,9 @@ class WeatherForecasterLoRA:
             quantization_config=quantization_config,
             device_map=self.device_map,
             trust_remote_code=True,
-            torch_dtype=torch.float16,
+            dtype=torch.float16,
+            use_safetensors=True,  # Explicitly use safetensors format
+            resume_download=True,  # Resume if download was interrupted
         )
 
         # Prepare model for training if quantized
