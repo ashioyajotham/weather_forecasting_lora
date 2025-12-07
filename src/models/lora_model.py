@@ -103,24 +103,40 @@ class WeatherForecasterLoRA:
             self.tokenizer.pad_token = self.tokenizer.eos_token
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
-        # Configure quantization if enabled
+        # Check if CUDA is available
+        has_cuda = torch.cuda.is_available()
+        
+        # Configure quantization if enabled AND GPU is available
         quantization_config = None
-        if self.quantization:
+        if self.quantization and has_cuda:
             quantization_config = BitsAndBytesConfig(
                 load_in_4bit=True,
                 bnb_4bit_use_double_quant=True,
                 bnb_4bit_quant_type="nf4",
                 bnb_4bit_compute_dtype=torch.float16,
             )
+            logger.info("Using 4-bit quantization with GPU")
+        elif self.quantization and not has_cuda:
+            logger.warning("Quantization requested but no GPU available. Running on CPU without quantization.")
+            self.quantization = False  # Disable quantization for CPU
+
+        # Determine device map and dtype
+        if has_cuda:
+            device_map = self.device_map
+            dtype = torch.float16
+        else:
+            device_map = "cpu"
+            dtype = torch.float32  # CPU works better with float32
+            logger.info("No GPU detected. Using CPU with float32")
 
         # Load base model
         try:
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.base_model_name,
                 quantization_config=quantization_config,
-                device_map=self.device_map,
+                device_map=device_map,
                 trust_remote_code=True,
-                dtype=torch.float16,
+                torch_dtype=dtype,
                 use_safetensors=True,  # Explicitly use safetensors format
                 local_files_only=False,  # Allow downloading from HF Hub
             )
@@ -130,14 +146,14 @@ class WeatherForecasterLoRA:
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.base_model_name,
                 quantization_config=quantization_config,
-                device_map=self.device_map,
+                device_map=device_map,
                 trust_remote_code=True,
-                dtype=torch.float16,
+                torch_dtype=dtype,
                 local_files_only=False,
             )
 
         # Prepare model for training if quantized
-        if self.quantization:
+        if self.quantization and has_cuda:
             self.model = prepare_model_for_kbit_training(self.model)
 
         # Apply LoRA configuration

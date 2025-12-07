@@ -56,9 +56,9 @@ training:
   # Scheduler
   lr_scheduler_type: "cosine"
   
-  # Mixed precision
-  fp16: true
-  dataloader_pin_memory: true
+  # Mixed precision (requires GPU)
+  fp16: false  # Set to false for CPU training
+  dataloader_pin_memory: false  # Disable for CPU
 
 # Data Configuration  
 data:
