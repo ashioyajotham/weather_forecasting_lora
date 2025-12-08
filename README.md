@@ -6,8 +6,9 @@
 ![Research Project](https://img.shields.io/badge/Research%20Project-Weather%20Forecasting%20LoRA-purple)
 ![Methodology](https://img.shields.io/badge/Methodology-Schulman%20et%20al.%202025-red)
 ![Domain](https://img.shields.io/badge/Domain-Meteorology%20%2B%20NLP-teal)
-![Model Type](https://img.shields.io/badge/Model-LoRA%20Fine--tuning-blue)
+![Model Type](https://img.shields.io/badge/Model-TinyLlama%201.1B-blue)
 ![Framework](https://img.shields.io/badge/Framework-Transformers%20%2B%20PEFT-yellow)
+![Inference](https://img.shields.io/badge/Inference-llama.cpp-lightblue)
 ![W&B](https://img.shields.io/badge/MLOps-Weights%20%26%20Biases-FFBE00)
 ![Status](https://img.shields.io/badge/Status-Active%20Development-success)
 
@@ -53,9 +54,9 @@ flowchart TD
     end
     
     subgraph "Model Architecture"
-        C1[Base LLM<br/>Mistral-7B / LLaMA-3-8B]
-        C2[LoRA Adapters<br/>r=32, α=32, All Linear Layers]
-        C3[Value Head<br/>For PPO Training]
+        C1[Base LLM<br/>TinyLlama-1.1B]
+        C2[LoRA Adapters<br/>r=16, α=32, Attention Layers]
+        C3[llama.cpp<br/>CPU Inference Engine]
     end
     
     subgraph "Training Pipeline"
@@ -127,12 +128,67 @@ sequenceDiagram
 
 - **Numerical → Text Mapping**: Convert structured weather data to natural language forecasts
 - **LoRA Fine-tuning**: Efficient adaptation with frozen base weights following Schulman et al. (2025)
-- **RLHF with PPO**: Optimize forecasts for accuracy and style using composite reward models
+- **TinyLlama-1.1B**: Optimized for CPU training (~2GB RAM vs 13GB for Mistral-7B)
+- **llama.cpp Integration**: Fast CPU inference engine with GGUF quantized models
 - **Modular Architecture**: Composable adapters for different forecasting domains
 - **Comprehensive Evaluation**: Multi-dimensional metrics (accuracy, calibration, style, readability)
 - **Research Reproducibility**: Complete methodology implementation with detailed documentation
 
-## 🔬 Research Implementation Details
+## � Innovation: llama.cpp CPU Inference
+
+This project integrates **[llama.cpp](https://github.com/ggerganov/llama.cpp)** for efficient CPU-based inference, enabling fast weather forecast generation without requiring expensive GPU hardware.
+
+### Why llama.cpp?
+
+```mermaid
+flowchart LR
+    subgraph "Training (Python)"
+        A[TinyLlama-1.1B] --> B[LoRA Training]
+        B --> C[PEFT Adapter]
+    end
+    
+    subgraph "Conversion"
+        C --> D[Merge LoRA]
+        D --> E[Convert to GGUF]
+    end
+    
+    subgraph "Inference (llama.cpp)"
+        E --> F[llama-cli.exe]
+        F --> G[Fast CPU Inference]
+    end
+    
+    style A fill:#e8f5e9
+    style F fill:#e3f2fd
+    style G fill:#fff3e0
+```
+
+**Benefits:**
+
+| Feature | Traditional Python | llama.cpp |
+|---------|-------------------|-----------|
+| **RAM Usage** | ~13GB (Mistral-7B) | ~4GB (Q4_K_M) |
+| **Inference Speed** | ~10 tokens/sec | ~25+ tokens/sec |
+| **Dependencies** | Heavy (PyTorch, CUDA) | Minimal (CPU only) |
+| **Deployment** | Complex | Single executable |
+
+### Building llama.cpp (Windows)
+
+```bash
+# Prerequisites: Visual Studio 2022 with "Desktop development with C++"
+
+# Build from source
+cd llama.cpp
+cmake -B build -G "Visual Studio 17 2022" -A x64
+cmake --build build --config Release
+
+# Key executables produced:
+# - llama-cli.exe     (interactive inference)
+# - llama-server.exe  (REST API server)
+# - llama-quantize.exe (model quantization)
+```
+
+## �🔬 Research Implementation Details
+
 
 ### Phase 1: Supervised Fine-Tuning (SFT)
 
@@ -229,34 +285,31 @@ forecasts = collector.fetch_open_meteo(
 )
 ```
 
-### 4. Training LoRA Model (with W&B Tracking)
+### 4. Training LoRA Model (CPU-Optimized)
 
-✅ **Status:** Ready to train with full W&B experiment tracking
+✅ **Status:** Training with TinyLlama-1.1B for CPU efficiency
 
 ```bash
-# Basic training with W&B tracking
-python train_lora.py \
-  --train_data data/processed/train.json \
-  --val_data data/processed/val.json \
-  --test_data data/processed/test.json \
-  --wandb_run_name "baseline-sft-v1"
+# Train with TinyLlama-1.1B (~2GB RAM, ~5 hours on CPU)
+python train_lora_peft.py
 
-# Training without W&B
-python train_lora.py \
-  --train_data data/processed/train.json \
-  --val_data data/processed/val.json \
-  --test_data data/processed/test.json \
-  --no_wandb
-
-# Custom configuration
-python train_lora.py \
-  --train_data data/processed/train.json \
-  --val_data data/processed/val.json \
-  --test_data data/processed/test.json \
-  --wandb_run_name "schulman-r32-lr5e5" \
-  --output_dir models/baseline \
-  --epochs 3
+# The script uses:
+# - TinyLlama-1.1B base model
+# - LoRA r=16, α=32
+# - 1000 training samples
+# - 1 epoch (adjustable in CONFIG)
 ```
+
+**After Training:**
+
+```bash
+# Output saved to: models/weather-lora-peft/lora_adapter/
+
+# To convert to GGUF for llama.cpp inference:
+# 1. Merge LoRA with base model
+# 2. Convert to GGUF format using llama.cpp scripts
+```
+
 
 **What Gets Tracked:**
 
