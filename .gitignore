@@ -142,3 +142,4 @@ wandb/offline-run-*/
 # Keep small sample data for testing
 !data/samples/
 !data/examples/
+llama.cpp/
