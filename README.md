@@ -166,7 +166,7 @@ flowchart LR
 
 | Feature | Traditional Python | llama.cpp |
 |---------|-------------------|-----------|
-| **RAM Usage** | ~13GB (Mistral-7B) | ~4GB (Q4_K_M) |
+| **RAM Usage** | ~4GB (full precision) | ~1GB (Q4_K_M) |
 | **Inference Speed** | ~10 tokens/sec | ~25+ tokens/sec |
 | **Dependencies** | Heavy (PyTorch, CUDA) | Minimal (CPU only) |
 | **Deployment** | Complex | Single executable |
