@@ -173,7 +173,8 @@ def main():
         fp16=False,  # CPU doesn't support fp16
         bf16=False,
         optim="adamw_torch",
-        report_to="none",
+        report_to="wandb",  # Enable W&B logging
+        run_name="weather-lora-tinyllama",  # W&B run name
         remove_unused_columns=False,
         dataloader_pin_memory=False,  # For CPU
     )
