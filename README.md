@@ -310,6 +310,35 @@ python train_lora_peft.py
 # 2. Convert to GGUF format using llama.cpp scripts
 ```
 
+### 5. Run the Weather CLI 🌤️
+
+After training and conversion, use the beautiful terminal interface:
+
+```bash
+python weather_cli.py
+```
+
+**CLI Features:**
+
+```
+╔═══════════════════════════════════════════════════════════════════════════╗
+║     ☁️   ☀️   🌤️   WEATHER FORECASTER AI   🌧️   ⛈️   🌈                ║
+║              Powered by TinyLlama + LoRA Fine-tuning                      ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+```
+
+| Command | Action |
+|---------|--------|
+| City name | Generate weather forecast |
+| `help` | Show help message |
+| `clear` | Clear screen |
+| `quit` | Exit application |
+
+**Or use llama.cpp directly:**
+
+```bash
+.\llama.cpp\build\bin\Release\llama-cli.exe -m models\gguf\weather-tinyllama.gguf -sys "You are a weather forecaster." -cnv --repeat-penalty 1.2
+```
 
 **What Gets Tracked:**
 
@@ -406,75 +435,61 @@ print(forecast)
 
 ### ✅ Completed Phases
 
-#### Phase 0: Infrastructure & Testing (Week 1)**
+#### Phase 1: Data Collection & Preparation ✅
 
-- ✅ Complete test suite (116 tests, 107 passing, 92% pass rate)
-- ✅ Test coverage: 43% baseline established
-- ✅ All unit tests passing (86/88)
-- ✅ Integration tests validated (12/17)
-- ✅ Performance tests ready (9/11)
-
-#### Phase 1: Data Collection & Preparation**
-
-- ✅ Weather data collection implemented
-- ✅ Training dataset: `data/processed/train.json`
+- ✅ Weather data collection from Open-Meteo API
+- ✅ Training dataset: `data/processed/train.json` (1000+ samples)
 - ✅ Validation dataset: `data/processed/val.json`
 - ✅ Test dataset: `data/processed/test.json`
-- ✅ Data preprocessing and formatting complete
+- ✅ Mistral instruction format preprocessing
 
-#### Phase 2: W&B MLOps Integration**
+#### Phase 2: LoRA Training (SFT) ✅
 
-- ✅ Weights & Biases integration
-- ✅ W&B utility module (`src/utils/wandb_logger.py`)
-- ✅ LoRATrainer W&B integration
-- ✅ WeatherEvaluator W&B integration
-- ✅ Main training script (`train_lora.py`)
-- ✅ Comprehensive documentation
-  - `docs/WANDB_GUIDE.md` - Complete reference
-  - `docs/WANDB_QUICKSTART.md` - 5-minute start
-  - `docs/WANDB_INTEGRATION_SUMMARY.md` - Feature overview
+- ✅ **TinyLlama-1.1B** base model (CPU-optimized, ~2GB RAM)
+- ✅ LoRA configuration: r=16, α=32, attention layers
+- ✅ Training completed: **6h 41m** on CPU
+- ✅ Final loss: **0.376** (70% reduction from 1.23)
+- ✅ W&B experiment tracking: [View Run](https://wandb.ai/ashioyajotham/huggingface)
 
-#### Phase 3: Supervised Fine-Tuning (SFT)**
+#### Phase 3: Model Conversion ✅
 
-- 🔄 Ready to train with full W&B tracking
-- ✅ LoRA configuration optimized (r=32, α=32)
-- ✅ Training script production-ready
-- ✅ Evaluation framework complete
+- ✅ LoRA adapter merged with base model
+- ✅ Converted to GGUF format: `models/gguf/weather-tinyllama.gguf` (2.05 GB)
+- ✅ llama.cpp built from source (VS 2022)
 
-### 🔄 In Progress
+#### Phase 4: CLI Interface ✅
 
-** SFT Training Execution
-
-- Next: Run first baseline training
-- Next: Hyperparameter experiments
-- Next: Ablation studies
+- ✅ Beautiful terminal CLI: `weather_cli.py`
+- ✅ ASCII art banner and rich formatting
+- ✅ Direct llama.cpp integration
 
 ### 📋 Upcoming Phases
 
-#### Phase 4: RLHF with PPO (Weeks 4-5)**
+#### Phase 5: RLHF with PPO (Future)
 
-- ⏳ Reward model implementation
-- ⏳ PPO trainer with W&B integration
-- ⏳ Human feedback loop
+- ⏳ Reward model for weather accuracy
+- ⏳ PPO training following Schulman methodology
+- ⏳ Human feedback integration
 
-#### Phase 5: Deployment (Weeks 6-7)**
+#### Phase 6: Deployment (Future)
 
-- ⏳ Inference engine optimization
-- ⏳ FastAPI server
-- ⏳ Production deployment
+- ⏳ FastAPI REST server
+- ⏳ Docker containerization
+- ⏳ Production optimization
 
-### 📈 Progress Metrics
+### � Progress Metrics
 
-| Component | Status | Completion |
-|-----------|--------|------------|
-| Testing Infrastructure | ✅ Complete | 100% |
-| Data Collection | ✅ Complete | 100% |
-| W&B Integration | ✅ Complete | 100% |
-| SFT Implementation | 🔄 Ready | 95% |
-| RLHF/PPO | ⏳ Planned | 0% |
-| Deployment | ⏳ Planned | 0% |
+| Component | Status | Details |
+|-----------|--------|---------|
+| Data Collection | ✅ Complete | 1000+ weather samples |
+| LoRA Training | ✅ Complete | Loss: 0.376, 6.7 hours |
+| GGUF Conversion | ✅ Complete | 2.05 GB model |
+| llama.cpp Build | ✅ Complete | VS 2022, CPU optimized |
+| CLI Interface | ✅ Complete | Rich terminal UI |
+| RLHF/PPO | ⏳ Planned | Future enhancement |
+| Deployment | ⏳ Planned | API server |
 
-**Overall Project:** ~60% Complete
+**Overall Project:** ~75% Complete
 
 ## 🎯 Methodology Alignment
 
