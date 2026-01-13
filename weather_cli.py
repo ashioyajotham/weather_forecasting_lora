@@ -1,217 +1,116 @@
-#!/usr/bin/env python3
-"""
-Weather Forecaster CLI
-======================
-
-Beautiful terminal interface for the Weather LoRA model.
-Uses llama.cpp for fast CPU inference.
-"""
-
-import subprocess
-import sys
+"""METEO-LLAMA Weather CLI"""
+import subprocess, sys, time, atexit, socket, re
 from pathlib import Path
 
 try:
+    import requests
     from rich.console import Console
     from rich.panel import Panel
-    from rich.text import Text
-    from rich.table import Table
     from rich.prompt import Prompt
     from rich import box
 except ImportError:
-    print("Installing required packages...")
-    subprocess.run([sys.executable, "-m", "pip", "install", "rich", "-q"])
+    subprocess.run([sys.executable, "-m", "pip", "install", "rich", "requests", "-q"])
+    import requests
     from rich.console import Console
     from rich.panel import Panel
-    from rich.text import Text
-    from rich.table import Table
     from rich.prompt import Prompt
     from rich import box
 
-# Configuration
 MODEL_PATH = Path("models/gguf/weather-tinyllama.gguf")
-LLAMA_CLI = Path("llama.cpp/build/bin/Release/llama-cli.exe")
-
+LLAMA_SERVER = Path("llama.cpp/build/bin/Release/llama-server.exe")
+LOG_FILE = Path("server.log")
 console = Console()
 
-# ASCII Art Banner
-BANNER = """
-[bold cyan]
-╔═══════════════════════════════════════════════════════════════════════════╗
-║                                                                           ║
-║     ☁️   ☀️   🌤️   WEATHER FORECASTER AI   🌧️   ⛈️   🌈                ║
-║                                                                           ║
-║         ═══════════════════════════════════════════════                   ║
-║                                                                           ║
-║              Powered by TinyLlama + LoRA Fine-tuning                      ║
-║              Following Schulman et al. (2025) Methodology                 ║
-║                                                                           ║
-╚═══════════════════════════════════════════════════════════════════════════╝
+BANNER = """[bold cyan]
+  __  __ _____ _____ _____ ___        _     _        _    __  __    _    
+ |  \\/  | ____|_   _| ____/ _ \\      | |   | |      / \\  |  \\/  |  / \\   
+ | |\\/| |  _|   | | |  _|| | | |_____| |   | |     / _ \\ | |\\/| | / _ \\  
+ | |  | | |___  | | | |__| |_| |_____| |___| |___ / ___ \\| |  | |/ ___ \\ 
+ |_|  |_|_____|_|_| |_____\\___/      |_____|_____/_/   \\_\\_|  |_/_/   \\_\\
 [/bold cyan]
-"""
+[bold green]                 Weather Intelligence System v1.0[/bold green]
+[dim]--------------------------------------------------------------------------------[/dim]
+   System: TinyLlama-1.1B + LoRA   Port: {port}   [bold green]Status: ONLINE[/bold green]
+[dim]--------------------------------------------------------------------------------[/dim]"""
 
-WEATHER_ICONS = {
-    "sunny": """
-    \\   /
-     .-.
-    (   )
-     `-'
-    """,
-    "cloudy": """
-     .--.
-    (    )
-    (    )
-     `--'
-    """,
-    "rainy": """
-     .--.
-    (    )
-     `--'
-    ' ' ' '
-    """,
-}
+HELP = "[green]Commands:[/green] help, clear, quit"
+server_process, server_port, server_url = None, 8080, ""
 
-HELP_TEXT = """
-[bold green]Commands:[/bold green]
-  • Type a city name to get a forecast
-  • [bold]help[/bold]  - Show this help message
-  • [bold]clear[/bold] - Clear the screen
-  • [bold]quit[/bold]  - Exit the application
-  
-[bold green]Examples:[/bold green]
-  • "What's the weather in Tokyo?"
-  • "Forecast for London"
-  • "New York weather"
-"""
+def find_port():
+    with socket.socket() as s:
+        s.bind(("", 0))
+        return s.getsockname()[1]
 
-
-def check_model():
-    """Check if model and llama-cli exist."""
-    if not MODEL_PATH.exists():
-        console.print(f"[red]Error: Model not found at {MODEL_PATH}[/red]")
-        console.print("[yellow]Run training first: python train_lora_peft.py[/yellow]")
+def start():
+    global server_process, server_port, server_url
+    if not MODEL_PATH.exists() or not LLAMA_SERVER.exists():
+        console.print("[red]Model/server not found[/red]")
         return False
-    
-    if not LLAMA_CLI.exists():
-        console.print(f"[red]Error: llama-cli not found at {LLAMA_CLI}[/red]")
-        console.print("[yellow]Build llama.cpp first[/yellow]")
-        return False
-    
+    server_port = find_port()
+    server_url = f"http://127.0.0.1:{server_port}"
+    cmd = [str(LLAMA_SERVER), "-m", str(MODEL_PATH), "--port", str(server_port), "--host", "127.0.0.1", "-ngl", "0", "-c", "2048", "--log-disable"]
+    with open(LOG_FILE, "w") as f:
+        server_process = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT)
     return True
 
+def wait():
+    with console.status("[cyan]Loading model...[/cyan]", spinner="dots"):
+        for _ in range(60):
+            try:
+                if requests.get(f"{server_url}/health", timeout=1).ok:
+                    return True
+            except: pass
+            time.sleep(1)
+            if server_process.poll() is not None: return False
+    return False
 
-def get_forecast(query: str) -> str:
-    """Get weather forecast from the model."""
-    prompt = f"Generate a weather forecast: {query}"
-    
-    cmd = [
-        str(LLAMA_CLI),
-        "-m", str(MODEL_PATH),
-        "-p", prompt,
-        "-n", "150",           # Max tokens
-        "--repeat-penalty", "1.3",
-        "--temp", "0.7",
-        "-ngl", "0",           # CPU only
-        "--no-display-prompt",
-    ]
-    
+def stop():
+    global server_process
+    if server_process:
+        server_process.terminate()
+        try: server_process.wait(5)
+        except: server_process.kill()
+        server_process = None
+
+atexit.register(stop)
+
+def forecast(q):
+    payload = {"prompt": f"Weather forecast for {q}:", "n_predict": 150, "temperature": 0.7, "repeat_penalty": 1.2, "stop": ["</s>"]}
     try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=180, 
-        )
-        
-        output = result.stdout.strip()
-        
-        # Clean up output
-        if "[end of text]" in output:
-            output = output.split("[end of text]")[0].strip()
-        
-        return output if output else "Unable to generate forecast."
-        
-    except subprocess.TimeoutExpired:
-        return "[yellow]Request timed out. Try again.[/yellow]"
-    except Exception as e:
-        return f"[red]Error: {e}[/red]"
+        r = requests.post(f"{server_url}/completion", json=payload, timeout=120)
+        return r.json().get("content", "").strip() if r.ok else "[red]Error[/red]"
+    except: return "[yellow]Timeout[/yellow]"
 
+def highlight(t):
+    t = re.sub(r'(\d+C)', r'[bold red]\1[/]', t)
+    t = re.sub(r'(\d+ ?km/h)', r'[bold cyan]\1[/]', t)
+    t = re.sub(r'(\d+%)', r'[bold blue]\1[/]', t)
+    return t
 
-def display_forecast(city: str, forecast: str):
-    """Display forecast in a nice panel."""
-    # Create forecast panel
-    panel = Panel(
-        forecast,
-        title=f"[bold white]🌍 Forecast for {city.title()}[/bold white]",
-        border_style="cyan",
-        box=box.ROUNDED,
-        padding=(1, 2),
-    )
-    console.print(panel)
-
-
-def show_banner():
-    """Display the ASCII art banner."""
-    console.print(BANNER)
-
-
-def show_help():
-    """Display help message."""
-    console.print(Panel(HELP_TEXT, title="[bold]Help[/bold]", border_style="green"))
-
+def display(city, text):
+    console.print(Panel(highlight(text), title=f"[green]{city.upper()}[/green]", border_style="green", box=box.ROUNDED))
 
 def main():
-    """Main CLI loop."""
-    console.clear()
-    show_banner()
-    
-    # Check dependencies
-    if not check_model():
-        return
-    
-    console.print("[dim]Type 'help' for commands, 'quit' to exit[/dim]\n")
-    
-    while True:
-        try:
-            # Get user input
-            query = Prompt.ask("\n[bold cyan]🌤️  Enter city or question[/bold cyan]")
-            
-            if not query.strip():
-                continue
-            
-            query_lower = query.lower().strip()
-            
-            # Handle commands
-            if query_lower in ("quit", "exit", "q"):
-                console.print("\n[bold green]Thanks for using Weather Forecaster! 👋[/bold green]\n")
-                break
-            
-            elif query_lower == "help":
-                show_help()
-                continue
-            
-            elif query_lower == "clear":
-                console.clear()
-                show_banner()
-                continue
-            
-            # Generate forecast
-            console.print("\n[dim]Generating forecast...[/dim]", end="\r")
-            
-            forecast = get_forecast(query)
-            
-            # Clear the "Generating..." message
-            console.print(" " * 30, end="\r")
-            
-            # Display result
-            display_forecast(query, forecast)
-            
-        except KeyboardInterrupt:
-            console.print("\n\n[bold green]Goodbye! 👋[/bold green]\n")
-            break
-        except Exception as e:
-            console.print(f"[red]Error: {e}[/red]")
-
+    try:
+        console.clear()
+        if not start(): return
+        console.print(BANNER.format(port=server_port))
+        if not wait():
+            console.print("[red]Server failed[/red]")
+            return
+        console.print("[dim]Type help for commands[/dim]\n")
+        while True:
+            q = Prompt.ask("[cyan]> City[/cyan]")
+            if not q.strip(): continue
+            if q.lower() in ("quit", "exit", "q"): break
+            if q.lower() == "help": console.print(HELP); continue
+            if q.lower() == "clear": console.clear(); console.print(BANNER.format(port=server_port)); continue
+            with console.status("[cyan]Analyzing...[/cyan]", spinner="dots"):
+                r = forecast(q)
+            display(q, r)
+    except KeyboardInterrupt: pass
+    finally: stop()
+    console.print("[green]Goodbye![/green]")
 
 if __name__ == "__main__":
     main()

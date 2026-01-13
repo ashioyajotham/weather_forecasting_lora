@@ -311,6 +311,7 @@ python train_lora_peft.py
 ```
 
 ### 5. Run the Weather CLI 🌤️
+(Now rebranded as **METEO-LLAMA**)
 
 After training and conversion, use the beautiful terminal interface:
 
@@ -322,17 +323,26 @@ python weather_cli.py
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════════╗
-║     ☁️   ☀️   🌤️   WEATHER FORECASTER AI   🌧️   ⛈️   🌈                ║
-║              Powered by TinyLlama + LoRA Fine-tuning                      ║
+║                                                                           ║
+║     ⚡   M E T E O - L L A M A   v 1 . 0   ⚡                             ║
+║                                                                           ║
+║         ═══════════════════════════════════════════════                   ║
+║                                                                           ║
+║              System: TinyLlama-1.1B + LoRA Adapter                        ║
+║              Status: ONLINE | Port: 8080                                  ║
+║                                                                           ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 ```
 
+- 🎨 **Syntax Highlighting**: Temperatures (Red), Wind (Cyan), Percentages (Blue)
+- 🚀 **Server Mode**: High-performance persistent model loading
+- 🔧 **Schulman SFT**: Implementation of "LoRA Without Regret" methodology
+
 | Command | Action |
 |---------|--------|
-| City name | Generate weather forecast |
-| `help` | Show help message |
-| `clear` | Clear screen |
-| `quit` | Exit application |
+| `help` | Show command list |
+| `clear` | Reset display |
+| `quit` | Shutdown system |
 
 **Or use llama.cpp directly:**
 
