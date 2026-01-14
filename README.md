@@ -311,8 +311,6 @@ python train_lora_peft.py
 ```
 
 ### 5. Run the Weather CLI 🌤️
-(Now rebranded as **METEO-LLAMA**)
-
 After training and conversion, use the beautiful terminal interface:
 
 ```bash
