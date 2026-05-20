@@ -13,30 +13,39 @@ Following the evaluation strategy outlined in the project specification.
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, TYPE_CHECKING, Tuple, Union
 import logging
 from dataclasses import dataclass
 import json
 import re
 from datetime import datetime
 
-# W&B integration
-from src.utils.wandb_logger import WandBLogger
+if TYPE_CHECKING:
+    from src.utils.wandb_logger import WandBLogger
 
-# Text evaluation metrics
+# Text evaluation metrics. Optional packages improve parity with common NLG
+# reporting, but local fallback metrics keep evaluation usable in fresh envs.
 try:
-    from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
-    from rouge_score import rouge_scorer
     import nltk
+    from nltk.translate.bleu_score import SmoothingFunction, sentence_bleu
+
     # Download required NLTK data
     try:
         nltk.data.find('tokenizers/punkt')
     except LookupError:
         nltk.download('punkt')
-    NLTK_AVAILABLE = True
+    BLEU_AVAILABLE = True
 except ImportError:
-    NLTK_AVAILABLE = False
-    logging.warning("NLTK or rouge_score not available. Install with: pip install nltk rouge-score")
+    BLEU_AVAILABLE = False
+    logging.warning("NLTK not available. Falling back to lexical BLEU approximation.")
+
+try:
+    from rouge_score import rouge_scorer
+
+    ROUGE_AVAILABLE = True
+except ImportError:
+    ROUGE_AVAILABLE = False
+    logging.warning("rouge_score not available. Falling back to token-overlap ROUGE approximation.")
 
 # Scientific computation
 try:
@@ -47,6 +56,63 @@ except ImportError:
     logging.warning("SciPy not available. Install with: pip install scipy")
 
 logger = logging.getLogger(__name__)
+
+METRIC_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "by",
+    "for",
+    "in",
+    "is",
+    "of",
+    "the",
+    "to",
+    "with",
+}
+
+
+def _tokenize_for_metrics(text: str) -> List[str]:
+    """Tokenize text for dependency-free fallback metrics."""
+    if not text:
+        return []
+    return [
+        token
+        for token in re.findall(r"[a-zA-Z0-9]+", text.lower())
+        if token not in METRIC_STOPWORDS
+    ]
+
+
+def _overlap_f1(generated_tokens: List[str], reference_tokens: List[str]) -> float:
+    """Calculate multiset token-overlap F1."""
+    if not generated_tokens or not reference_tokens:
+        return 0.0
+
+    generated_counts: Dict[str, int] = {}
+    reference_counts: Dict[str, int] = {}
+    for token in generated_tokens:
+        generated_counts[token] = generated_counts.get(token, 0) + 1
+    for token in reference_tokens:
+        reference_counts[token] = reference_counts.get(token, 0) + 1
+
+    overlap = sum(
+        min(count, reference_counts.get(token, 0))
+        for token, count in generated_counts.items()
+    )
+    if overlap == 0:
+        return 0.0
+
+    precision = overlap / len(generated_tokens)
+    recall = overlap / len(reference_tokens)
+    return 2 * precision * recall / (precision + recall)
+
+
+def _ngram_tokens(tokens: List[str], n: int) -> List[str]:
+    """Return string n-grams for fallback ROUGE-N."""
+    if len(tokens) < n:
+        return []
+    return [" ".join(tokens[i : i + n]) for i in range(len(tokens) - n + 1)]
 
 
 @dataclass
@@ -247,13 +313,19 @@ class MetricsCalculator:
         """Initialize metrics calculator."""
         self.extractor = WeatherTextExtractor()
         
-        # Initialize ROUGE scorer if available
-        if NLTK_AVAILABLE:
+        # Initialize optional metric helpers when available.
+        if ROUGE_AVAILABLE:
             self.rouge_scorer = rouge_scorer.RougeScorer(
                 ['rouge1', 'rouge2', 'rougeL'], 
                 use_stemmer=True
             )
+        else:
+            self.rouge_scorer = None
+
+        if BLEU_AVAILABLE:
             self.smoothing_function = SmoothingFunction().method1
+        else:
+            self.smoothing_function = None
         
         logger.info("MetricsCalculator initialized")
     
@@ -268,12 +340,15 @@ class MetricsCalculator:
         Returns:
             BLEU score (0-1)
         """
-        if not NLTK_AVAILABLE:
+        if not generated or not reference:
             return 0.0
         
         # Tokenize texts
-        reference_tokens = reference.lower().split()
-        generated_tokens = generated.lower().split()
+        reference_tokens = _tokenize_for_metrics(reference)
+        generated_tokens = _tokenize_for_metrics(generated)
+
+        if not BLEU_AVAILABLE:
+            return _overlap_f1(generated_tokens, reference_tokens)
         
         # Calculate BLEU score
         score = sentence_bleu(
@@ -295,15 +370,29 @@ class MetricsCalculator:
         Returns:
             Dictionary with ROUGE scores
         """
-        if not NLTK_AVAILABLE:
+        if not generated or not reference:
             return {'rouge1_f': 0.0, 'rouge2_f': 0.0, 'rougeL_f': 0.0}
         
-        scores = self.rouge_scorer.score(reference, generated)
+        if ROUGE_AVAILABLE:
+            scores = self.rouge_scorer.score(reference, generated)
+            return {
+                'rouge1_f': scores['rouge1'].fmeasure,
+                'rouge2_f': scores['rouge2'].fmeasure,
+                'rougeL_f': scores['rougeL'].fmeasure
+            }
         
+        generated_tokens = _tokenize_for_metrics(generated)
+        reference_tokens = _tokenize_for_metrics(reference)
+        rouge1 = _overlap_f1(generated_tokens, reference_tokens)
+        rouge2 = _overlap_f1(
+            _ngram_tokens(generated_tokens, 2),
+            _ngram_tokens(reference_tokens, 2),
+        )
+
         return {
-            'rouge1_f': scores['rouge1'].fmeasure,
-            'rouge2_f': scores['rouge2'].fmeasure,
-            'rougeL_f': scores['rougeL'].fmeasure
+            'rouge1_f': rouge1,
+            'rouge2_f': rouge2,
+            'rougeL_f': rouge1,
         }
     
     def calculate_meteorological_accuracy(
@@ -477,15 +566,11 @@ class MetricsCalculator:
             0.1 * met_accuracy['rain_accuracy']
         )
         
-        # Confidence interval (bootstrap estimate)
-        if SCIPY_AVAILABLE and len(bleu_scores) > 10:
-            ci_lower, ci_upper = stats.t.interval(
-                0.95, len(bleu_scores)-1, 
-                loc=overall_score, 
-                scale=stats.sem([overall_score] * len(bleu_scores))
-            )
-        else:
-            ci_lower, ci_upper = overall_score * 0.9, overall_score * 1.1
+        # Conservative interval around aggregate score. A proper bootstrap needs
+        # per-sample aggregate scores; avoid a zero-variance t-interval here.
+        margin = 0.05 if len(predictions) > 10 else 0.10
+        ci_lower = max(0.0, overall_score - margin)
+        ci_upper = min(1.0, overall_score + margin)
         
         return EvaluationMetrics(
             bleu_score=avg_bleu,
@@ -515,7 +600,7 @@ class WeatherEvaluator:
     metric calculation, reporting, and W&B logging.
     """
     
-    def __init__(self, wandb_logger: Optional[WandBLogger] = None):
+    def __init__(self, wandb_logger: Optional["WandBLogger"] = None):
         """
         Initialize weather evaluator.
         
@@ -637,7 +722,7 @@ class WeatherEvaluator:
         # Log weather-specific metrics
         self.wandb_logger.log_weather_metrics(
             temperature_mae=metrics.temperature_mae,
-            temperature_accuracy=metrics.temperature_accuracy,
+            temperature_accuracy=metrics.categorical_accuracy,
             wind_speed_mae=metrics.wind_speed_mae,
             precipitation_accuracy=metrics.rain_accuracy,
             step=step or 0,

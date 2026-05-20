@@ -12,6 +12,20 @@
 ![W&B](https://img.shields.io/badge/MLOps-Weights%20%26%20Biases-FFBE00)
 ![Status](https://img.shields.io/badge/Status-Active%20Development-success)
 
+## Current Verified State
+
+This checkout is a usable research prototype, not a production-ready end-to-end system. The verified path is:
+
+```bash
+python -m pytest -q
+python scripts/smoke_check.py
+python train_lora_peft.py
+python merge_lora.py
+python weather_cli.py
+```
+
+Older documentation previously referenced `run_complete_pipeline.py`, `train_sft.py`, and `config/base_config.yaml`; those files are not present in this checkout. See [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) and [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) for the current runnable path and known gaps.
+
 A comprehensive research implementation of weather forecasting using LoRA (Low-Rank Adaptation) fine-tuning on Large Language Models, following the groundbreaking methodology from Schulman et al. (2025) "LoRA Without Regret".
 
 > *"Inspiration is perishable — act on it immediately."*  
@@ -72,10 +86,10 @@ flowchart TD
         E4[Composite Reward<br/>Weighted Combination]
     end
     
-    subgraph "Deployment"
+    subgraph "Deployment / Local Inference"
         F1[Inference Engine<br/>src/inference/engine.py]
-        F2[FastAPI Server<br/>REST API Endpoints]
-        F3[Batch Processing<br/>Multi-location Forecasts]
+        F2[llama.cpp Server<br/>local /completion endpoint]
+        F3[Terminal CLI<br/>weather_cli.py]
     end
     
     A1 & A2 & A3 & A4 --> B1
@@ -107,7 +121,7 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     participant User
-    participant API as FastAPI Server
+    participant API as Local llama.cpp Server
     participant Engine as Inference Engine
     participant Model as LoRA Model
     participant Data as Weather Data
@@ -219,21 +233,39 @@ Multi-dimensional assessment following meteorological standards:
 
 ## 📁 Project Structure
 
-```bash
-weather-forecasting/
-├── src/                    # Core source code
-│   ├── data/              # Data collection & preprocessing
-│   ├── models/            # LoRA models & training
-│   ├── evaluation/        # Metrics & evaluation
-│   ├── rl/               # Reinforcement learning components
-│   ├── inference/        # Deployment & API
-│   └── utils/            # Configuration & utilities
-├── data/                  # Raw & processed datasets
-├── models/               # Trained model checkpoints
-├── config/               # Configuration files
-├── notebooks/            # Jupyter notebooks for analysis
-├── tests/                # Unit tests
-└── requirements.txt      # Dependencies
+```text
+weather forecasting/
+├── src/
+│   ├── data/
+│   │   ├── collector.py
+│   │   └── preprocessor.py
+│   ├── evaluation/
+│   │   └── metrics.py
+│   ├── inference/
+│   │   └── engine.py
+│   ├── models/
+│   │   └── lora_model.py
+│   ├── rl/
+│   │   └── ppo_trainer.py
+│   └── utils/
+│       └── wandb_logger.py
+├── config/
+│   ├── sft_config.yaml
+│   └── ppo_config.yaml
+├── data/
+│   ├── raw/               # ignored generated data
+│   └── processed/         # ignored generated train/val/test JSON
+├── docs/
+├── scripts/
+│   └── smoke_check.py
+├── tests/
+├── collect_sample_data.py
+├── train_lora_peft.py
+├── merge_lora.py
+├── weather_cli.py
+├── pyproject.toml
+├── requirements.txt
+└── README.md
 ```
 
 ## Quick Start
@@ -377,7 +409,7 @@ model = WeatherForecasterLoRA(
 # Train with W&B tracking
 trainer = LoRATrainer(
     model=model, 
-    config_path="config/base_config.yaml",
+    config_path="config/sft_config.yaml",
     use_wandb=True,
     wandb_run_name="my-experiment"
 )
@@ -497,11 +529,11 @@ print(forecast)
 | RLHF/PPO | ⏳ Planned | Future enhancement |
 | Deployment | ⏳ Planned | API server |
 
-**Overall Project:** ~75% Complete
+**Overall Project:** usable prototype; see `docs/PROJECT_STATUS.md` for verified status and known gaps.
 
 ## 🎯 Methodology Alignment
 
-This implementation strictly follows Schulman et al. (2025) "LoRA Without Regret":
+The package trainer and standalone TinyLlama script are configured to follow the LoRA target-module guidance from Schulman et al. (2025). Existing local GGUF artifacts may need retraining/reconversion before generation quality reflects the latest training-label masking fix:
 
 ✅ **Frozen base weights** with LoRA adapters only  
 ✅ **All linear layers** (attention + MLP)  
@@ -520,13 +552,12 @@ This implementation strictly follows Schulman et al. (2025) "LoRA Without Regret
 
 ## 🛠️ Configuration
 
-All configurations are stored in `config/` directory:
+Current configuration files in `config/`:
 
-- `base_config.yaml`: Base model and general settings
-- `sft_config.yaml`: Supervised fine-tuning parameters
-- `ppo_config.yaml`: PPO and RLHF settings
-- `data_config.yaml`: Data sources and preprocessing
-- `eval_config.yaml`: Evaluation metrics and thresholds
+- `sft_config.yaml`: Supervised fine-tuning parameters for the package trainer
+- `ppo_config.yaml`: PPO and RLHF settings for the PPO scaffolding
+
+The runnable TinyLlama script currently keeps its defaults in `train_lora_peft.py`.
 
 ## 🧪 Testing
 
@@ -544,14 +575,13 @@ pytest tests/test_evaluation.py
 
 ### Getting Started
 
-- **[W&B Quick Start](docs/WANDB_QUICKSTART.md)** - Get started with W&B in 5 minutes
 - **[W&B Complete Guide](docs/WANDB_GUIDE.md)** - Comprehensive W&B reference
 - **[W&B Integration Summary](docs/WANDB_INTEGRATION_SUMMARY.md)** - Feature overview
 
 ### Project Documentation
 
 - **[Training Recipe](Training%20Recipe%20for%20LoRA%20in%20Weather%20Forecasting.md)** - Complete training methodology
-- **[Project Status](PROJECT_STATUS.md)** - Implementation status and roadmap
+- **[Project Status](docs/PROJECT_STATUS.md)** - Implementation status and roadmap
 - **[Contributing Guidelines](CONTRIBUTING.md)** - How to contribute
 
 ## 🤝 Contributing

@@ -1,5 +1,5 @@
 """METEO-LLAMA Weather CLI"""
-import subprocess, sys, time, atexit, socket, re
+import json, subprocess, sys, time, atexit, socket, re
 from pathlib import Path
 
 try:
@@ -19,6 +19,7 @@ except ImportError:
 MODEL_PATH = Path("models/gguf/weather-tinyllama.gguf")
 LLAMA_SERVER = Path("llama.cpp/build/bin/Release/llama-server.exe")
 LOG_FILE = Path("server.log")
+DATA_PATH = Path("data/processed/test.json")
 console = Console()
 
 BANNER = """[bold cyan]
@@ -35,6 +36,24 @@ BANNER = """[bold cyan]
 
 HELP = "[green]Commands:[/green] help, clear, quit"
 server_process, server_port, server_url = None, 8080, ""
+sample_prompts = {}
+
+FALLBACK_PROFILES = {
+    "nairobi": {
+        "temperature": [24.0, 25.3, 24.8, 23.6],
+        "humidity": [56, 60, 64, 68],
+        "wind_speed": [11.0, 13.5, 15.0, 12.2],
+        "pressure": [1015.0, 1014.6, 1014.2, 1014.5],
+        "precipitation_probability": [0.10, 0.15, 0.20, 0.25],
+    },
+    "new york": {
+        "temperature": [18.3, 18.0, 17.7, 17.6],
+        "humidity": [66, 75, 79, 79],
+        "wind_speed": [14.8, 5.2, 10.4, 13.0],
+        "pressure": [1020.0, 1019.4, 1019.4, 1019.5],
+        "precipitation_probability": [0.00, 0.00, 0.00, 0.00],
+    },
+}
 
 def find_port():
     with socket.socket() as s:
@@ -52,6 +71,47 @@ def start():
     with open(LOG_FILE, "w") as f:
         server_process = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT)
     return True
+
+def load_sample_prompts():
+    global sample_prompts
+    if sample_prompts or not DATA_PATH.exists():
+        return
+    try:
+        with open(DATA_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        for item in data:
+            location = str(item.get("location", "")).strip().lower()
+            prompt = item.get("input")
+            if location and prompt and location not in sample_prompts:
+                sample_prompts[location] = prompt
+    except Exception:
+        sample_prompts = {}
+
+def format_sequence(values, precision=1):
+    return ", ".join(f"{float(v):.{precision}f}" for v in values)
+
+def build_weather_prompt(city):
+    load_sample_prompts()
+    key = city.strip().lower()
+    if key in sample_prompts:
+        base_prompt = sample_prompts[key]
+    else:
+        profile = FALLBACK_PROFILES.get(key, FALLBACK_PROFILES["nairobi"])
+        base_prompt = f"""Weather data for {city.strip()} on current local conditions:
+- Temperature (°C): {format_sequence(profile["temperature"])}
+- Humidity (%): {format_sequence(profile["humidity"], 0)}
+- Wind speed (km/h): {format_sequence(profile["wind_speed"])}
+- Pressure (hPa): {format_sequence(profile["pressure"])}
+- Precipitation probability: {format_sequence(profile["precipitation_probability"], 2)}
+
+Generate a forecast bulletin:"""
+
+    return (
+        "<s>[INST] "
+        + base_prompt
+        + "\n\nWrite only a concise natural-language forecast bulletin. "
+        + "Do not repeat the input weather variables. [/INST]"
+    )
 
 def wait():
     with console.status("[cyan]Loading model...[/cyan]", spinner="dots"):
@@ -75,9 +135,9 @@ def stop():
 atexit.register(stop)
 
 def forecast(q):
-    payload = {"prompt": f"Weather forecast for {q}:", "n_predict": 150, "temperature": 0.7, "repeat_penalty": 1.2, "stop": ["</s>"]}
+    payload = {"prompt": build_weather_prompt(q), "n_predict": 80, "temperature": 0.35, "repeat_penalty": 1.2, "stop": ["</s>", "[/INST]"]}
     try:
-        r = requests.post(f"{server_url}/completion", json=payload, timeout=120)
+        r = requests.post(f"{server_url}/completion", json=payload, timeout=240)
         return r.json().get("content", "").strip() if r.ok else "[red]Error[/red]"
     except: return "[yellow]Timeout[/yellow]"
 

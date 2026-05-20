@@ -9,6 +9,7 @@ import pytest
 import torch
 import tempfile
 import json
+import shutil
 from pathlib import Path
 from typing import Dict, List
 from unittest.mock import Mock, MagicMock
@@ -33,9 +34,13 @@ def test_config():
 
 @pytest.fixture(scope="session")
 def temp_dir():
-    """Create temporary directory for test outputs."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        yield Path(tmpdir)
+    """Create temporary directory for test outputs inside the workspace."""
+    path = Path(__file__).resolve().parents[1] / ".dist" / "pytest-tmp"
+    if path.exists():
+        shutil.rmtree(path, ignore_errors=True)
+    path.mkdir(parents=True, exist_ok=True)
+    yield path
+    shutil.rmtree(path, ignore_errors=True)
 
 
 # ============================================================================

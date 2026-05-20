@@ -18,7 +18,7 @@ from transformers import (
     AutoTokenizer,
     TrainingArguments,
     Trainer,
-    DataCollatorForLanguageModeling,
+    default_data_collator,
 )
 from peft import (
     LoraConfig,
@@ -65,24 +65,47 @@ def load_training_data(path: str, max_samples: int = None):
     if max_samples:
         data = data[:max_samples]
     
-    # Format for Mistral instruction format
+    # Format for TinyLlama chat instruction tuning. Keep prompt and response
+    # separate so tokenization can mask prompt labels during training.
     formatted = []
     for item in data:
-        text = f"<s>[INST] {item['input']} [/INST] {item['target']} </s>"
-        formatted.append({"text": text})
+        prompt = f"<s>[INST] {item['input']} [/INST]"
+        response = f" {item['target']} </s>"
+        formatted.append({"prompt": prompt, "response": response})
     
     logger.info(f"Loaded {len(formatted)} training examples")
     return Dataset.from_list(formatted)
 
 
 def tokenize_function(examples, tokenizer, max_length):
-    """Tokenize examples."""
-    return tokenizer(
-        examples["text"],
-        truncation=True,
-        max_length=max_length,
-        padding="max_length",
-    )
+    """Tokenize examples and train loss on response tokens only."""
+    input_ids = []
+    attention_masks = []
+    labels = []
+
+    for prompt, response in zip(examples["prompt"], examples["response"]):
+        prompt_ids = tokenizer(prompt, add_special_tokens=False)["input_ids"]
+        response_ids = tokenizer(response, add_special_tokens=False)["input_ids"]
+
+        ids = (prompt_ids + response_ids)[:max_length]
+        label_ids = ([-100] * len(prompt_ids) + response_ids)[:max_length]
+        attention = [1] * len(ids)
+
+        pad_len = max_length - len(ids)
+        if pad_len > 0:
+            ids += [tokenizer.pad_token_id] * pad_len
+            attention += [0] * pad_len
+            label_ids += [-100] * pad_len
+
+        input_ids.append(ids)
+        attention_masks.append(attention)
+        labels.append(label_ids)
+
+    return {
+        "input_ids": input_ids,
+        "attention_mask": attention_masks,
+        "labels": labels,
+    }
 
 
 def main():
@@ -130,7 +153,15 @@ def main():
         lora_dropout=CONFIG['lora_dropout'],
         bias="none",
         task_type=TaskType.CAUSAL_LM,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+        target_modules=[
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj",
+        ],
     )
     
     model = get_peft_model(model, lora_config)
@@ -148,12 +179,6 @@ def main():
         lambda x: tokenize_function(x, tokenizer, CONFIG['max_length']),
         batched=True,
         remove_columns=train_dataset.column_names,
-    )
-    
-    # Data collator
-    data_collator = DataCollatorForLanguageModeling(
-        tokenizer=tokenizer,
-        mlm=False,
     )
     
     # Training arguments
@@ -184,7 +209,7 @@ def main():
         model=model,
         args=training_args,
         train_dataset=tokenized_dataset,
-        data_collator=data_collator,
+        data_collator=default_data_collator,
     )
     
     # Train

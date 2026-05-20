@@ -18,18 +18,16 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
-    TrainingArguments,
-    Trainer,
 )
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training, TaskType
 from datasets import Dataset
 import logging
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, TYPE_CHECKING, Union
 import yaml
 from pathlib import Path
 
-# W&B integration
-from src.utils.wandb_logger import WandBLogger, WandBCallback
+if TYPE_CHECKING:
+    from src.utils.wandb_logger import WandBLogger
 
 logger = logging.getLogger(__name__)
 
@@ -222,7 +220,7 @@ class WeatherForecasterLoRA:
         self,
         output_dir: str = "./models/weather-lora-sft",
         config_path: Optional[str] = None,
-    ) -> TrainingArguments:
+    ):
         """
         Create training arguments following Schulman et al. methodology.
 
@@ -271,6 +269,8 @@ class WeatherForecasterLoRA:
                 if "training" in config:
                     default_config.update(config["training"])
 
+        from transformers import TrainingArguments
+
         # Create TrainingArguments
         training_args = TrainingArguments(**default_config)
 
@@ -288,8 +288,8 @@ class WeatherForecasterLoRA:
         self,
         train_dataset: Dataset,
         eval_dataset: Optional[Dataset] = None,
-        training_args: Optional[TrainingArguments] = None,
-    ) -> Trainer:
+        training_args=None,
+    ):
         """
         Create Hugging Face Trainer for LoRA fine-tuning.
 
@@ -308,7 +308,7 @@ class WeatherForecasterLoRA:
             training_args = self.create_training_arguments()
 
         # Data collator for causal LM
-        from transformers import DataCollatorForLanguageModeling
+        from transformers import DataCollatorForLanguageModeling, Trainer
 
         data_collator = DataCollatorForLanguageModeling(
             tokenizer=self.tokenizer,
@@ -439,16 +439,12 @@ class LoRATrainer:
         self.config_path = config_path
         self.trainer = None
         self.use_wandb = use_wandb
+        self.wandb_project = wandb_project
+        self.wandb_run_name = wandb_run_name
         
-        # Initialize W&B logger if enabled
-        self.wandb_logger = None
-        if self.use_wandb:
-            self.wandb_logger = WandBLogger(
-                config_path=config_path,
-                project=wandb_project,
-                name=wandb_run_name,
-            )
-            logger.info("W&B logging enabled")
+        # Initialize W&B lazily during training so package imports and tests do
+        # not require experiment-tracking side effects.
+        self.wandb_logger: Optional["WandBLogger"] = None
         
         logger.info("LoRATrainer initialized")
 
@@ -471,6 +467,16 @@ class LoRATrainer:
         # Load model if not already loaded
         if self.model.peft_model is None:
             self.model.load_model()
+
+        if self.use_wandb and self.wandb_logger is None:
+            from src.utils.wandb_logger import WandBLogger
+
+            self.wandb_logger = WandBLogger(
+                config_path=self.config_path,
+                project=self.wandb_project,
+                name=self.wandb_run_name,
+            )
+            logger.info("W&B logging enabled")
 
         # Initialize W&B run if enabled
         if self.use_wandb and self.wandb_logger:
@@ -522,6 +528,8 @@ class LoRATrainer:
         
         # Add W&B callback
         if self.use_wandb and self.wandb_logger:
+            from src.utils.wandb_logger import WandBCallback
+
             wandb_callback = WandBCallback(self.wandb_logger)
             self.trainer.add_callback(wandb_callback)
             logger.info("W&B callback added to trainer")

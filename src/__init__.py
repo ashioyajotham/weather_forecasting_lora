@@ -18,11 +18,12 @@ Architecture:
 - Deployment: Modular adapters for different forecasting domains
 """
 
-from .data import WeatherDataCollector, WeatherPreprocessor
-from .models import WeatherForecasterLoRA, LoRATrainer
-from .evaluation import WeatherEvaluator, MetricsCalculator
-from .rl import PPOTrainerWeather, WeatherRewardModel
-from .inference import WeatherInference, ForecastAPI
+import os
+
+# This project uses the PyTorch Transformers stack. Keeping TensorFlow disabled
+# avoids optional Keras/tf-keras imports during package import and test discovery.
+os.environ.setdefault("USE_TF", "0")
+os.environ.setdefault("TRANSFORMERS_NO_TF", "1")
 
 __version__ = "1.0.0"
 __author__ = "Ashioya Jotham Victor"
@@ -40,3 +41,48 @@ __all__ = [
     "WeatherInference",
     "ForecastAPI",
 ]
+
+
+def __getattr__(name):
+    """Lazily expose public classes without importing every ML stack at once."""
+    if name in {"WeatherDataCollector", "WeatherPreprocessor"}:
+        from .data import WeatherDataCollector, WeatherPreprocessor
+
+        return {
+            "WeatherDataCollector": WeatherDataCollector,
+            "WeatherPreprocessor": WeatherPreprocessor,
+        }[name]
+
+    if name in {"WeatherForecasterLoRA", "LoRATrainer"}:
+        from .models import WeatherForecasterLoRA, LoRATrainer
+
+        return {
+            "WeatherForecasterLoRA": WeatherForecasterLoRA,
+            "LoRATrainer": LoRATrainer,
+        }[name]
+
+    if name in {"WeatherEvaluator", "MetricsCalculator"}:
+        from .evaluation import WeatherEvaluator, MetricsCalculator
+
+        return {
+            "WeatherEvaluator": WeatherEvaluator,
+            "MetricsCalculator": MetricsCalculator,
+        }[name]
+
+    if name in {"PPOTrainerWeather", "WeatherRewardModel"}:
+        from .rl import PPOTrainerWeather, WeatherRewardModel
+
+        return {
+            "PPOTrainerWeather": PPOTrainerWeather,
+            "WeatherRewardModel": WeatherRewardModel,
+        }[name]
+
+    if name in {"WeatherInference", "ForecastAPI"}:
+        from .inference import WeatherInference, ForecastAPI
+
+        return {
+            "WeatherInference": WeatherInference,
+            "ForecastAPI": ForecastAPI,
+        }[name]
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
