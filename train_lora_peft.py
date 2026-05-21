@@ -54,6 +54,9 @@ CONFIG = {
     "logging_steps": 10,
 }
 
+CONFIG["max_samples"] = int(os.environ.get("WEATHER_LORA_MAX_SAMPLES", "1000"))
+CONFIG["report_to"] = os.environ.get("WEATHER_LORA_REPORT_TO", "none")
+
 
 def load_training_data(path: str, max_samples: int = None):
     """Load and format training data."""
@@ -171,7 +174,7 @@ def main():
     logger.info("")
     train_dataset = load_training_data(
         CONFIG['train_data'],
-        max_samples=1000,  # Limit for CPU training
+        max_samples=CONFIG['max_samples'],  # Limit for CPU training
     )
     
     logger.info("Tokenizing dataset...")
@@ -198,7 +201,7 @@ def main():
         fp16=False,  # CPU doesn't support fp16
         bf16=False,
         optim="adamw_torch",
-        report_to="wandb",  # Enable W&B logging
+        report_to=CONFIG['report_to'],
         run_name="weather-lora-tinyllama",  # W&B run name
         remove_unused_columns=False,
         dataloader_pin_memory=False,  # For CPU
