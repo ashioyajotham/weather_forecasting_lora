@@ -93,10 +93,14 @@ to `/completion`.
 ```powershell
 python -m pytest -q
 python scripts/smoke_check.py
+python scripts/eval_smoke.py
+python scripts/ppo_smoke.py
 ```
 
 The smoke check validates imports, processed data shape, config files, model
-artifact presence, and CLI prerequisites without loading the model.
+artifact presence, and CLI prerequisites without loading the model. The eval
+and PPO smoke scripts validate metric fallbacks, reward scoring, TRL imports,
+and local artifact presence.
 
 ## Current Non-Goals
 
@@ -106,4 +110,3 @@ These are not end-to-end runnable in this checkout yet:
 - `train_sft.py`
 - A runnable FastAPI server entrypoint
 - Verified PPO/RLHF training with the currently installed TRL version
-

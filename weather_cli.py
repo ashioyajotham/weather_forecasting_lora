@@ -107,10 +107,10 @@ def build_weather_prompt(city):
 Generate a forecast bulletin:"""
 
     return (
-        "<s>[INST] "
+        "<|user|>\n"
         + base_prompt
         + "\n\nWrite only a concise natural-language forecast bulletin. "
-        + "Do not repeat the input weather variables. [/INST]"
+        + "Do not repeat the input weather variables.</s>\n<|assistant|>\n"
     )
 
 def wait():
@@ -135,7 +135,7 @@ def stop():
 atexit.register(stop)
 
 def forecast(q):
-    payload = {"prompt": build_weather_prompt(q), "n_predict": 80, "temperature": 0.35, "repeat_penalty": 1.2, "stop": ["</s>", "[/INST]"]}
+    payload = {"prompt": build_weather_prompt(q), "n_predict": 80, "temperature": 0.25, "repeat_penalty": 1.25, "stop": ["</s>", "<|user|>", "<|system|>"]}
     try:
         r = requests.post(f"{server_url}/completion", json=payload, timeout=240)
         return r.json().get("content", "").strip() if r.ok else "[red]Error[/red]"

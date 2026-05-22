@@ -72,8 +72,8 @@ def load_training_data(path: str, max_samples: int = None):
     # separate so tokenization can mask prompt labels during training.
     formatted = []
     for item in data:
-        prompt = f"<s>[INST] {item['input']} [/INST]"
-        response = f" {item['target']} </s>"
+        prompt = f"<|user|>\n{item['input']}</s>\n<|assistant|>\n"
+        response = f"{item['target']}</s>"
         formatted.append({"prompt": prompt, "response": response})
     
     logger.info(f"Loaded {len(formatted)} training examples")

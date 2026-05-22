@@ -19,6 +19,8 @@ This checkout is a usable research prototype, not a production-ready end-to-end 
 ```bash
 python -m pytest -q
 python scripts/smoke_check.py
+python scripts/eval_smoke.py
+python scripts/ppo_smoke.py
 python train_lora_peft.py
 python merge_lora.py
 python weather_cli.py
@@ -257,6 +259,8 @@ weather forecasting/
 │   └── processed/         # ignored generated train/val/test JSON
 ├── docs/
 ├── scripts/
+│   ├── eval_smoke.py
+│   ├── ppo_smoke.py
 │   └── smoke_check.py
 ├── tests/
 ├── collect_sample_data.py
@@ -494,7 +498,7 @@ print(forecast)
 #### Phase 3: Model Conversion ✅
 
 - ✅ LoRA adapter merged with base model
-- ✅ Converted to GGUF format: `models/gguf/weather-tinyllama.gguf` (2.05 GB)
+- ✅ Converted to GGUF format: `models/gguf/weather-tinyllama.gguf` (~2.2 GB)
 - ✅ llama.cpp built from source (VS 2022)
 
 #### Phase 4: CLI Interface ✅
@@ -522,8 +526,8 @@ print(forecast)
 | Component | Status | Details |
 |-----------|--------|---------|
 | Data Collection | ✅ Complete | 1000+ weather samples |
-| LoRA Training | ✅ Complete | Loss: 0.376, 6.7 hours |
-| GGUF Conversion | ✅ Complete | 2.05 GB model |
+| LoRA Training | ✅ Prototype complete | Latest smoke retrain: 200 samples, response-only loss |
+| GGUF Conversion | ✅ Complete | ~2.2 GB F16 model |
 | llama.cpp Build | ✅ Complete | VS 2022, CPU optimized |
 | CLI Interface | ✅ Complete | Rich terminal UI |
 | RLHF/PPO | ⏳ Planned | Future enhancement |
@@ -533,7 +537,7 @@ print(forecast)
 
 ## 🎯 Methodology Alignment
 
-The package trainer and standalone TinyLlama script are configured to follow the LoRA target-module guidance from Schulman et al. (2025). Existing local GGUF artifacts may need retraining/reconversion before generation quality reflects the latest training-label masking fix:
+The package trainer and standalone TinyLlama script are configured to follow the LoRA target-module guidance from Schulman et al. (2025). The local GGUF has been retrained/reconverted after the response-only loss fix and verified through llama.cpp smoke inference:
 
 ✅ **Frozen base weights** with LoRA adapters only  
 ✅ **All linear layers** (attention + MLP)  
