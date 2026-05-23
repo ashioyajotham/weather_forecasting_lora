@@ -95,12 +95,40 @@ python -m pytest -q
 python scripts/smoke_check.py
 python scripts/eval_smoke.py
 python scripts/ppo_smoke.py
+python scripts/generation_quality_eval.py
+python train_ppo.py
 ```
 
 The smoke check validates imports, processed data shape, config files, model
 artifact presence, and CLI prerequisites without loading the model. The eval
 and PPO smoke scripts validate metric fallbacks, reward scoring, TRL imports,
-and local artifact presence.
+and local artifact presence. The pinned generation-quality eval catches prompt
+leakage, table fragments, and missing forecast content on a stable five-case
+fixture. `train_ppo.py` defaults to a safe dry run; pass `--run-training` only
+when you intentionally want to start the heavier PPO path.
+
+## FastAPI Service
+
+For a local HTTP service:
+
+```powershell
+python run_api.py
+```
+
+By default the service starts in fallback mode so the API can be smoke-tested
+without loading the GGUF. To proxy real generation through llama.cpp, start the
+llama.cpp server separately and set:
+
+```powershell
+$env:WEATHER_LLAMA_SERVER_URL = "http://127.0.0.1:8080"
+python run_api.py
+```
+
+Endpoints:
+
+- `GET /health`
+- `POST /forecast` with JSON such as
+  `{"city": "Nairobi", "weather_data": {"temperature": "23-25", "wind_speed": "10-15", "precipitation_probability": "0.10"}}`
 
 ## Current Non-Goals
 
@@ -108,5 +136,5 @@ These are not end-to-end runnable in this checkout yet:
 
 - `run_complete_pipeline.py`
 - `train_sft.py`
-- A runnable FastAPI server entrypoint
-- Verified PPO/RLHF training with the currently installed TRL version
+- Production FastAPI auth, rate limiting, and deployment packaging
+- Verified long-running PPO/RLHF training with the currently installed TRL version

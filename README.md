@@ -21,10 +21,15 @@ python -m pytest -q
 python scripts/smoke_check.py
 python scripts/eval_smoke.py
 python scripts/ppo_smoke.py
+python scripts/generation_quality_eval.py
 python train_lora_peft.py
+python train_ppo.py
+python run_api.py
 python merge_lora.py
 python weather_cli.py
 ```
+
+For Colab training, see [`notebooks/colab_tinyllama_lora.ipynb`](notebooks/colab_tinyllama_lora.ipynb) and [`docs/COLAB_TRAINING.md`](docs/COLAB_TRAINING.md). A T4 is workable for TinyLlama LoRA with conservative settings, but not optimal for long full-dataset or PPO runs.
 
 Older documentation previously referenced `run_complete_pipeline.py`, `train_sft.py`, and `config/base_config.yaml`; those files are not present in this checkout. See [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) and [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) for the current runnable path and known gaps.
 
@@ -256,15 +261,20 @@ weather forecasting/
 │   └── ppo_config.yaml
 ├── data/
 │   ├── raw/               # ignored generated data
-│   └── processed/         # ignored generated train/val/test JSON
+│   ├── processed/         # ignored generated train/val/test JSON
+│   └── eval/              # pinned generation-quality fixtures
 ├── docs/
+├── notebooks/
 ├── scripts/
 │   ├── eval_smoke.py
+│   ├── generation_quality_eval.py
 │   ├── ppo_smoke.py
 │   └── smoke_check.py
 ├── tests/
 ├── collect_sample_data.py
+├── run_api.py
 ├── train_lora_peft.py
+├── train_ppo.py
 ├── merge_lora.py
 ├── weather_cli.py
 ├── pyproject.toml
@@ -530,8 +540,8 @@ print(forecast)
 | GGUF Conversion | ✅ Complete | ~2.2 GB F16 model |
 | llama.cpp Build | ✅ Complete | VS 2022, CPU optimized |
 | CLI Interface | ✅ Complete | Rich terminal UI |
-| RLHF/PPO | ⏳ Planned | Future enhancement |
-| Deployment | ⏳ Planned | API server |
+| RLHF/PPO | ⚠️ Partial | Reward + TRL smoke, guarded PPO entrypoint |
+| Deployment | ⚠️ Partial | FastAPI fallback + llama.cpp proxy |
 
 **Overall Project:** usable prototype; see `docs/PROJECT_STATUS.md` for verified status and known gaps.
 

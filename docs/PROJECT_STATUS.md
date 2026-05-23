@@ -19,6 +19,10 @@ Status: usable research prototype, not production-ready.
   `models/gguf/weather-tinyllama.gguf` as an F16 GGUF artifact.
 - llama.cpp smoke inference through the CLI prompt path returns concise
   natural-language forecasts instead of prompt/table fragments.
+- FastAPI health and forecast fallback endpoints pass local TestClient smoke
+  checks.
+- `nltk` and `rouge_score` are installed in the current user Python
+  environment; fallback metrics remain available for fresh environments.
 
 ## Implemented Components
 
@@ -28,21 +32,26 @@ Status: usable research prototype, not production-ready.
 - LoRA adapter merge path in `merge_lora.py`.
 - Evaluation metric utilities in `src/evaluation/metrics.py`.
 - llama.cpp-backed terminal CLI in `weather_cli.py`.
+- FastAPI app factory in `src/inference/api.py` and runner in `run_api.py`.
 - PPO reward/trainer scaffolding in `src/rl/ppo_trainer.py`.
 - PPO smoke diagnostics in `scripts/ppo_smoke.py`.
+- Pinned generation-quality fixture in `data/eval/generation_quality.json`.
 
 ## Known Gaps
 
 - `run_complete_pipeline.py`, `train_sft.py`, and `config/base_config.yaml` are
   referenced by older docs but do not exist.
-- PPO/RLHF is scaffolding only until verified against the installed TRL API and
-  a real training run.
-- FastAPI is only represented by wrapper code, not a runnable app entrypoint.
+- PPO/RLHF has reward-model and TRL smoke coverage plus a guarded `train_ppo.py`
+  entrypoint, but still needs a real long-running PPO job before being treated
+  as a trained model stage.
+- FastAPI has a runnable app entrypoint. It supports fallback smoke responses
+  and llama.cpp proxying through `WEATHER_LLAMA_SERVER_URL`; production auth,
+  rate limiting, and deployment packaging are still open.
 - The latest local retrain was intentionally small for turnaround time. It
   verifies the training/merge/GGUF plumbing, but it is not a full quality run.
-- Optional metric dependencies such as NLTK and `rouge-score` are not required
-  for smoke validation because fallback metrics are implemented, but installing
-  them would improve parity with standard BLEU/ROUGE reporting.
+- Optional metric dependencies such as NLTK and `rouge-score` are pinned and
+  installed locally, but fallback metrics remain necessary for fresh or offline
+  environments.
 - The tests include many placeholders and skipped integration paths, so passing
   tests should not be interpreted as full model-quality validation.
 - Data and model artifacts are ignored by git and need explicit regeneration or
@@ -54,10 +63,12 @@ Status: usable research prototype, not production-ready.
 
 1. Run a full-scale retrain on the complete processed dataset, then repeat the
    merge, GGUF conversion, CLI smoke test, and quantitative evaluation.
-2. Add a small pinned generation-quality eval set so future GGUF outputs can be
-   compared against expected forecast style and content.
-3. Keep `scripts/smoke_check.py`, `scripts/eval_smoke.py`, and
-   `scripts/ppo_smoke.py` current as fresh-checkout validation.
-4. Add a runnable FastAPI entrypoint if API deployment is still a goal.
+2. Run `scripts/generation_quality_eval.py` against real GGUF outputs after
+   each retrain and track the report with the training notes.
+3. Keep `scripts/smoke_check.py`, `scripts/eval_smoke.py`,
+   `scripts/ppo_smoke.py`, and `scripts/generation_quality_eval.py` current as
+   fresh-checkout validation.
+4. Add FastAPI auth, rate limiting, and deployment packaging if API deployment
+   is still a goal.
 5. Run and document real PPO/RLHF training before advertising PPO support
    beyond reward-model and import smoke diagnostics.
