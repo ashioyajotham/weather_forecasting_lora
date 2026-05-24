@@ -5,7 +5,7 @@ Status: usable research prototype, not production-ready.
 ## Verified Locally
 
 - Package imports work after restoring the `src.data.preprocessor` import path.
-- Unit tests pass: `107 passed, 9 skipped`.
+- Unit tests pass: `109 passed, 9 skipped`.
 - Processed datasets are present locally:
   - train: 13,913 samples
   - validation: 1,739 samples
@@ -36,6 +36,8 @@ Status: usable research prototype, not production-ready.
 - PPO reward/trainer scaffolding in `src/rl/ppo_trainer.py`.
 - PPO smoke diagnostics in `scripts/ppo_smoke.py`.
 - Pinned generation-quality fixture in `data/eval/generation_quality.json`.
+- Split Colab notebooks for TinyLlama/GGUF and PPO artifact runs in
+  `notebooks/`.
 
 ## Known Gaps
 
@@ -44,6 +46,8 @@ Status: usable research prototype, not production-ready.
 - PPO/RLHF has reward-model and TRL smoke coverage plus a guarded `train_ppo.py`
   entrypoint, but still needs a real long-running PPO job before being treated
   as a trained model stage.
+- Colab artifact handoff is documented through Google Drive manifests, but the
+  imported Colab artifacts still need to be verified locally after each run.
 - FastAPI has a runnable app entrypoint. It supports fallback smoke responses
   and llama.cpp proxying through `WEATHER_LLAMA_SERVER_URL`; production auth,
   rate limiting, and deployment packaging are still open.

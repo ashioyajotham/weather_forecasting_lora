@@ -29,7 +29,7 @@ python merge_lora.py
 python weather_cli.py
 ```
 
-For Colab training, see [`notebooks/colab_tinyllama_lora.ipynb`](notebooks/colab_tinyllama_lora.ipynb) and [`docs/COLAB_TRAINING.md`](docs/COLAB_TRAINING.md). A T4 is workable for TinyLlama LoRA with conservative settings, but not optimal for long full-dataset or PPO runs.
+For Colab training, use [`notebooks/colab_tinyllama_gguf.ipynb`](notebooks/colab_tinyllama_gguf.ipynb) first, then [`notebooks/colab_ppo_training.ipynb`](notebooks/colab_ppo_training.ipynb) if PPO is needed. See [`docs/COLAB_TRAINING.md`](docs/COLAB_TRAINING.md) for Drive artifact handoff and local import checks. A T4 is workable for TinyLlama LoRA with conservative settings, but not optimal for long full-dataset or PPO runs.
 
 Older documentation previously referenced `run_complete_pipeline.py`, `train_sft.py`, and `config/base_config.yaml`; those files are not present in this checkout. See [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) and [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) for the current runnable path and known gaps.
 
