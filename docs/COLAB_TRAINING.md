@@ -9,6 +9,17 @@ This split is intentional. TinyLlama LoRA training, merge, and GGUF conversion
 produce the baseline artifact. PPO is experimental and should consume that
 baseline as input instead of being mixed into the same runtime.
 
+## Fresh Runtime Rule
+
+If a Colab run fails during dependency installation or import preflight, restart
+the runtime before trying again. Do not continue after package mismatch errors.
+
+The known failure mode is installing the full local `requirements.txt` on Colab:
+it can replace only part of Colab's CUDA PyTorch stack and break Transformers
+imports with `operator torchvision::nms does not exist`. The notebooks therefore
+install `requirements-colab.txt`, which leaves Colab's `torch`, `torchvision`,
+and `torchaudio` packages intact.
+
 ## GPU Choice
 
 A Colab T4 can work for TinyLlama LoRA because this project trains LoRA
@@ -16,12 +27,14 @@ adapters on TinyLlama, not full model weights. It is acceptable for smoke and
 medium runs with conservative settings:
 
 ```bash
-WEATHER_LORA_MAX_SAMPLES=1000
+WEATHER_LORA_MAX_SAMPLES=200
 WEATHER_LORA_REPORT_TO=none
 ```
 
-T4 is not optimal for full-dataset runs or PPO. Prefer L4, A10, A100, or a
-similar larger CUDA GPU when runtime and memory matter.
+Use `200` for the first retry, then increase to `1000` or full data after the
+adapter, merge, GGUF conversion, and manifest export pass. T4 is not optimal
+for full-dataset runs or PPO. Prefer L4, A10, A100, or a similar larger CUDA GPU
+when runtime and memory matter.
 
 ## Artifact Handoff
 
@@ -70,11 +83,14 @@ python run_api.py
 
 Accept a Colab TinyLlama/GGUF run only when:
 
+- dependency preflight imports `Trainer`, `PeftModel`, and CUDA Torch
 - smoke checks pass before training
 - LoRA adapter is saved
 - merged Hugging Face model is saved
-- GGUF conversion completes or the merged model is exported for local conversion
-- `manifest_tinyllama_gguf.json` records commit, GPU, sample count, paths, and sizes
+- GGUF conversion completes in the isolated conversion venv, or the merged model
+  is exported for local conversion
+- `manifest_tinyllama_gguf.json` records commit, GPU, sample count, paths, and
+  nonzero artifact sizes
 - local import passes smoke checks and generation-quality eval
 
 ## PPO Acceptance

@@ -38,6 +38,8 @@ Status: usable research prototype, not production-ready.
 - Pinned generation-quality fixture in `data/eval/generation_quality.json`.
 - Split Colab notebooks for TinyLlama/GGUF and PPO artifact runs in
   `notebooks/`.
+- Colab-specific dependency file `requirements-colab.txt` avoids replacing
+  Colab's CUDA PyTorch/TorchVision stack.
 
 ## Known Gaps
 
@@ -48,6 +50,8 @@ Status: usable research prototype, not production-ready.
   as a trained model stage.
 - Colab artifact handoff is documented through Google Drive manifests, but the
   imported Colab artifacts still need to be verified locally after each run.
+- Colab dependency failures require a fresh runtime before retrying; continuing
+  in a partially replaced Python environment is not reliable.
 - FastAPI has a runnable app entrypoint. It supports fallback smoke responses
   and llama.cpp proxying through `WEATHER_LLAMA_SERVER_URL`; production auth,
   rate limiting, and deployment packaging are still open.

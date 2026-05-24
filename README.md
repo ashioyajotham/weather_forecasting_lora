@@ -279,6 +279,7 @@ weather forecasting/
 ├── weather_cli.py
 ├── pyproject.toml
 ├── requirements.txt
+├── requirements-colab.txt
 └── README.md
 ```
 
@@ -298,6 +299,10 @@ pip install -r requirements.txt
 # Install additional packages
 pip install wandb bitsandbytes scipy
 ```
+
+For Colab, use the notebooks and `requirements-colab.txt` instead of the full
+local requirements file. The Colab requirements intentionally leave Colab's
+CUDA `torch`, `torchvision`, and `torchaudio` stack untouched.
 
 ### 2. W&B Setup (For Experiment Tracking)
 
