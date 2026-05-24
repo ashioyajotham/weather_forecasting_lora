@@ -36,6 +36,21 @@ adapter, merge, GGUF conversion, and manifest export pass. T4 is not optimal
 for full-dataset runs or PPO. Prefer L4, A10, A100, or a similar larger CUDA GPU
 when runtime and memory matter.
 
+## Processed Data On Colab
+
+Fresh clones do not include `data/processed/train.json`, `val.json`, or
+`test.json` because those files are ignored project artifacts. The TinyLlama
+notebook runs `scripts/prepare_data.py` before smoke checks:
+
+```bash
+python scripts/prepare_data.py --min-train 240 --min-val 30 --min-test 30 --synthetic-if-missing
+```
+
+If real processed data is already present, the script validates and uses it. If
+not, it creates a deterministic synthetic fallback dataset for a 200-sample
+smoke run. This fallback verifies the training, merge, GGUF, and artifact
+plumbing. It is not a substitute for final-quality model training.
+
 ## Artifact Handoff
 
 The notebooks use Google Drive as the handoff layer:
@@ -84,6 +99,7 @@ python run_api.py
 Accept a Colab TinyLlama/GGUF run only when:
 
 - dependency preflight imports `Trainer`, `PeftModel`, and CUDA Torch
+- processed data is validated or generated before smoke checks
 - smoke checks pass before training
 - LoRA adapter is saved
 - merged Hugging Face model is saved
@@ -92,6 +108,10 @@ Accept a Colab TinyLlama/GGUF run only when:
 - `manifest_tinyllama_gguf.json` records commit, GPU, sample count, paths, and
   nonzero artifact sizes
 - local import passes smoke checks and generation-quality eval
+
+For full-quality training, restore or regenerate the larger real processed
+dataset in `data/processed/` before increasing `WEATHER_LORA_MAX_SAMPLES`
+beyond smoke scale.
 
 ## PPO Acceptance
 

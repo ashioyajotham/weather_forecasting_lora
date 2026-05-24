@@ -268,6 +268,7 @@ weather forecasting/
 ├── scripts/
 │   ├── eval_smoke.py
 │   ├── generation_quality_eval.py
+│   ├── prepare_data.py
 │   ├── ppo_smoke.py
 │   └── smoke_check.py
 ├── tests/

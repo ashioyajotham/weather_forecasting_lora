@@ -36,6 +36,7 @@ Status: usable research prototype, not production-ready.
 - PPO reward/trainer scaffolding in `src/rl/ppo_trainer.py`.
 - PPO smoke diagnostics in `scripts/ppo_smoke.py`.
 - Pinned generation-quality fixture in `data/eval/generation_quality.json`.
+- Deterministic Colab smoke-data fallback in `scripts/prepare_data.py`.
 - Split Colab notebooks for TinyLlama/GGUF and PPO artifact runs in
   `notebooks/`.
 - Colab-specific dependency file `requirements-colab.txt` avoids replacing
@@ -52,6 +53,8 @@ Status: usable research prototype, not production-ready.
   imported Colab artifacts still need to be verified locally after each run.
 - Colab dependency failures require a fresh runtime before retrying; continuing
   in a partially replaced Python environment is not reliable.
+- Colab synthetic fallback data is for smoke runs only; final-quality training
+  still needs the real processed dataset restored or regenerated.
 - FastAPI has a runnable app entrypoint. It supports fallback smoke responses
   and llama.cpp proxying through `WEATHER_LLAMA_SERVER_URL`; production auth,
   rate limiting, and deployment packaging are still open.
