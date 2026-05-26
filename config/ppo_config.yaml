@@ -16,7 +16,6 @@ ppo:
   ppo_epochs: 4              # Number of PPO epochs per batch
   cliprange: 0.2             # PPO clipping range
   vf_coef: 0.1              # Value function coefficient
-  ent_coef: 0.01            # Entropy coefficient for exploration
   
   # KL regularization (Schulman Sec. 4.1: critical for LoRA)
   kl_penalty: "kl"          # Use KL penalty

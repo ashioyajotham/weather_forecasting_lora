@@ -376,7 +376,6 @@ class PPOTrainerWeather:
             'target_kl': 0.1,           # Target KL divergence
             'cliprange': 0.2,           # PPO clipping range
             'vf_coef': 0.1,             # Value function coefficient
-            'ent_coef': 0.01,           # Entropy coefficient
             'max_grad_norm': 1.0,       # Gradient clipping
             'seed': 42
         }
@@ -423,7 +422,6 @@ class PPOTrainerWeather:
             target_kl=self.config['target_kl'],
             cliprange=self.config['cliprange'],
             vf_coef=self.config['vf_coef'],
-            ent_coef=self.config['ent_coef'],
             max_grad_norm=self.config['max_grad_norm'],
             seed=self.config['seed'],
             log_with=None  # Can add wandb/tensorboard

@@ -64,10 +64,27 @@ def test_trl_imports() -> None:
     _ = (AutoModelForCausalLMWithValueHead, PPOConfig, PPOTrainer)
     ppo_config_params = signature(PPOConfig).parameters
     ppo_trainer_params = signature(PPOTrainer).parameters
+    project_ppo_config_keys = {
+        "batch_size",
+        "forward_batch_size",
+        "learning_rate",
+        "mini_batch_size",
+        "gradient_accumulation_steps",
+        "ppo_epochs",
+        "kl_penalty",
+        "init_kl_coef",
+        "target_kl",
+        "cliprange",
+        "vf_coef",
+        "max_grad_norm",
+        "seed",
+        "log_with",
+    }
 
     missing = []
-    if "forward_batch_size" not in ppo_config_params:
-        missing.append("PPOConfig.forward_batch_size")
+    for key in sorted(project_ppo_config_keys):
+        if key not in ppo_config_params:
+            missing.append(f"PPOConfig.{key}")
     if "config" not in ppo_trainer_params:
         missing.append("PPOTrainer(config=...)")
     if "tokenizer" not in ppo_trainer_params:
