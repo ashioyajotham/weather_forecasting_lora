@@ -103,6 +103,54 @@ def test_trl_imports() -> None:
     logger.info("TRL PPO classic API OK: trl==%s", version("trl"))
 
 
+def test_ppo_config_types() -> None:
+    """Verify PPO YAML/default config is normalized before TRL receives it."""
+    from src.rl.ppo_trainer import PPOTrainerWeather, WeatherRewardModel
+
+    trainer = PPOTrainerWeather(
+        model_path=str(ROOT / "models" / "weather-merged"),
+        reward_model=WeatherRewardModel(),
+        config_path=str(ROOT / "config" / "ppo_config.yaml"),
+    )
+    config = trainer._load_config()
+    int_fields = {
+        "batch_size",
+        "forward_batch_size",
+        "mini_batch_size",
+        "gradient_accumulation_steps",
+        "ppo_epochs",
+        "seed",
+    }
+    float_fields = {
+        "learning_rate",
+        "init_kl_coef",
+        "target_kl",
+        "cliprange",
+        "vf_coef",
+        "max_grad_norm",
+    }
+
+    bad_fields = [
+        f"{field}={config[field]!r} ({type(config[field]).__name__})"
+        for field in sorted(int_fields)
+        if not isinstance(config[field], int)
+    ]
+    bad_fields.extend(
+        f"{field}={config[field]!r} ({type(config[field]).__name__})"
+        for field in sorted(float_fields)
+        if not isinstance(config[field], float)
+    )
+    if not isinstance(config["kl_penalty"], str):
+        bad_fields.append(
+            f"kl_penalty={config['kl_penalty']!r} ({type(config['kl_penalty']).__name__})"
+        )
+
+    if bad_fields:
+        raise SystemExit("PPO config has unnormalized field types: " + ", ".join(bad_fields))
+
+    logger.info("PPO config numeric types OK")
+
+
 def check_model_artifacts() -> None:
     """Report current local model artifact state."""
     paths = [
@@ -143,6 +191,7 @@ def test_real_forecasts() -> None:
 def main() -> None:
     test_reward_model()
     test_trl_imports()
+    test_ppo_config_types()
     check_model_artifacts()
     test_real_forecasts()
     logger.info("PPO smoke check completed")

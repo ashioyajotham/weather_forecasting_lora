@@ -385,7 +385,30 @@ class PPOTrainerWeather:
                 config = yaml.safe_load(f)
                 if 'ppo' in config:
                     default_config.update(config['ppo'])
-        
+
+        int_fields = {
+            'batch_size',
+            'forward_batch_size',
+            'mini_batch_size',
+            'gradient_accumulation_steps',
+            'ppo_epochs',
+            'seed',
+        }
+        float_fields = {
+            'learning_rate',
+            'init_kl_coef',
+            'target_kl',
+            'cliprange',
+            'vf_coef',
+            'max_grad_norm',
+        }
+
+        for field in int_fields:
+            default_config[field] = int(default_config[field])
+        for field in float_fields:
+            default_config[field] = float(default_config[field])
+        default_config['kl_penalty'] = str(default_config['kl_penalty'])
+
         return default_config
     
     def load_model(self):

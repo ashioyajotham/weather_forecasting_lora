@@ -10,7 +10,7 @@ ppo:
   gradient_accumulation_steps: 1
   
   # Learning rate (smaller than SFT for stability)
-  learning_rate: 1e-5        # Much smaller than SFT 5e-5
+  learning_rate: 0.00001     # Much smaller than SFT 5e-5
   
   # PPO specific parameters
   ppo_epochs: 4              # Number of PPO epochs per batch
