@@ -115,8 +115,17 @@ beyond smoke scale.
 
 ## PPO Acceptance
 
-Run PPO only after a TinyLlama/GGUF Drive run exists. In the PPO notebook, set
-`SOURCE_RUN_DIR` to that exact Drive path.
+Run PPO only after a TinyLlama/GGUF Drive run exists. The PPO notebook now
+auto-detects the latest valid `tinyllama_gguf_*` Drive run by default. Set the
+`SOURCE_RUN_DIR` environment variable only when you want to force a specific
+run.
+
+The selected source run must include:
+
+- `manifest_tinyllama_gguf.json`
+- `merged/`
+- Hugging Face model weights inside `merged/`, such as `.safetensors`, `.bin`,
+  or a model weight index file
 
 Validate first:
 
@@ -127,7 +136,7 @@ python train_ppo.py
 Then start a small CUDA trial:
 
 ```bash
-python train_ppo.py --run-training --limit 64
+python train_ppo.py --run-training --limit 16
 ```
 
 Treat PPO as experimental until a real CUDA run completes and the imported
