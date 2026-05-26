@@ -127,6 +127,16 @@ The selected source run must include:
 - Hugging Face model weights inside `merged/`, such as `.safetensors`, `.bin`,
   or a model weight index file
 
+Fresh Colab clones also lack ignored `data/processed/*.json` files. Before PPO
+smoke checks, the notebook runs:
+
+```bash
+python scripts/prepare_data.py --min-train 64 --min-val 8 --min-test 8 --synthetic-if-missing
+```
+
+This keeps PPO plumbing reproducible. For final PPO quality, restore or
+regenerate the real processed dataset before increasing sample count.
+
 Validate first:
 
 ```bash
