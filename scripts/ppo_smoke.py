@@ -10,6 +10,8 @@ import json
 import logging
 import os
 import sys
+from importlib.metadata import version
+from inspect import signature
 from pathlib import Path
 
 
@@ -56,11 +58,32 @@ def test_reward_model() -> None:
 
 
 def test_trl_imports() -> None:
-    """Verify TRL PPO dependencies import."""
+    """Verify TRL PPO dependencies expose the classic manual-step API."""
     from trl import AutoModelForCausalLMWithValueHead, PPOConfig, PPOTrainer
 
     _ = (AutoModelForCausalLMWithValueHead, PPOConfig, PPOTrainer)
-    logger.info("TRL PPO imports OK")
+    ppo_config_params = signature(PPOConfig).parameters
+    ppo_trainer_params = signature(PPOTrainer).parameters
+
+    missing = []
+    if "forward_batch_size" not in ppo_config_params:
+        missing.append("PPOConfig.forward_batch_size")
+    if "config" not in ppo_trainer_params:
+        missing.append("PPOTrainer(config=...)")
+    if "tokenizer" not in ppo_trainer_params:
+        missing.append("PPOTrainer(tokenizer=...)")
+    if not hasattr(PPOTrainer, "step"):
+        missing.append("PPOTrainer.step")
+
+    if missing:
+        installed = version("trl")
+        raise SystemExit(
+            "Installed TRL is incompatible with this project's manual PPO loop. "
+            f"Installed trl=={installed}; missing {', '.join(missing)}. "
+            "Install trl==0.11.4 or update the PPO trainer to the newer TRL API."
+        )
+
+    logger.info("TRL PPO classic API OK: trl==%s", version("trl"))
 
 
 def check_model_artifacts() -> None:
