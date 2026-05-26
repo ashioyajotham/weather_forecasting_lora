@@ -359,6 +359,7 @@ class PPOTrainerWeather:
         self.tokenizer = None
         self.model = None
         self.ppo_trainer = None
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         logger.info(f"PPOTrainerWeather initialized with model: {model_path}")
     
@@ -426,9 +427,22 @@ class PPOTrainerWeather:
             device_map="auto",
             torch_dtype=torch.float16
         )
+        self.device = self._model_device()
         
-        logger.info("Model loaded with value head for PPO training")
+        logger.info(f"Model loaded with value head for PPO training on {self.device}")
         return self.model
+
+    def _model_device(self) -> torch.device:
+        """Resolve the active device for TRL wrappers that do not expose .device."""
+        if self.model is not None:
+            try:
+                return next(self.model.parameters()).device
+            except StopIteration:
+                pass
+            except AttributeError:
+                pass
+
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     def create_ppo_trainer(self) -> PPOTrainer:
         """Create PPO trainer with weather-specific configuration."""
@@ -477,19 +491,20 @@ class PPOTrainerWeather:
         """
         # Extract prompts
         prompts = [example['input'] for example in batch]
+        model_device = self._model_device()
         
         # Tokenize queries
         query_tensors = []
         for prompt in prompts:
             tokens = self.tokenizer.encode(prompt, return_tensors="pt")
-            query_tensors.append(tokens.squeeze())
+            query_tensors.append(tokens.squeeze().to(model_device))
         
         # Generate responses
         response_tensors = []
         with torch.no_grad():
             for query_tensor in query_tensors:
                 response = self.model.generate(
-                    query_tensor.unsqueeze(0).to(self.model.device),
+                    query_tensor.unsqueeze(0).to(model_device),
                     max_new_tokens=128,
                     temperature=0.7,
                     do_sample=True,
@@ -515,7 +530,7 @@ class PPOTrainerWeather:
             rewards.append(reward_components.total_reward)
         
         # Convert to tensors
-        rewards = torch.tensor(rewards, dtype=torch.float32).to(self.model.device)
+        rewards = torch.tensor(rewards, dtype=torch.float32).to(model_device)
         
         # PPO step
         stats = self.ppo_trainer.step(query_tensors, response_tensors, rewards)
@@ -552,6 +567,8 @@ class PPOTrainerWeather:
         Path(output_dir).mkdir(parents=True, exist_ok=True)
         
         step = 0
+        successful_steps = 0
+        failed_steps = 0
         for epoch in range(num_epochs):
             logger.info(f"Starting epoch {epoch + 1}/{num_epochs}")
             
@@ -579,14 +596,25 @@ class PPOTrainerWeather:
                         logger.info(f"Saved checkpoint at step {step}")
                     
                     step += 1
+                    successful_steps += 1
                     
                 except Exception as e:
+                    failed_steps += 1
                     logger.warning(f"Error in training step {step}: {e}")
                     continue
+
+        if successful_steps == 0:
+            raise RuntimeError(
+                f"PPO training completed zero successful steps ({failed_steps} failed). "
+                "Check the earlier training-step errors for the root cause."
+            )
         
         # Save final model
         self.save_model(output_dir)
-        logger.info(f"PPO training completed. Final model saved to {output_dir}")
+        logger.info(
+            f"PPO training completed with {successful_steps} successful steps "
+            f"and {failed_steps} failed steps. Final model saved to {output_dir}"
+        )
     
     def save_model(self, output_path: str):
         """Save the PPO-trained model."""
