@@ -529,8 +529,11 @@ class PPOTrainerWeather:
             )
             rewards.append(reward_components.total_reward)
         
-        # Convert to tensors
-        rewards = torch.tensor(rewards, dtype=torch.float32).to(model_device)
+        # TRL classic PPO expects one scalar score tensor per response.
+        rewards = [
+            torch.tensor(reward, dtype=torch.float32, device=model_device)
+            for reward in rewards
+        ]
         
         # PPO step
         stats = self.ppo_trainer.step(query_tensors, response_tensors, rewards)
