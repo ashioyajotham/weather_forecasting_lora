@@ -19,7 +19,7 @@ ppo:
   early_stopping: true       # Stop PPO minibatch loop if KL spikes
   ratio_threshold: 2.0       # Skip unstable ratio spikes earlier
   score_clip: 1.0            # Keep reward scores bounded for PPO
-  use_score_scaling: true    # Stabilize score scale across batches
+  use_score_scaling: false   # Disabled: TRL 0.11.4 scaling path can call .to() on float state
   use_score_norm: false      # Keep absolute reward direction
   whiten_rewards: false     # Avoid extra whitening instability
   

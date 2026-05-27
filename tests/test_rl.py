@@ -107,6 +107,7 @@ def test_ppo_config_avoids_singleton_minibatches():
     assert trainer.config["batch_size"] >= trainer.config["mini_batch_size"]
     assert trainer.config["early_stopping"] is True
     assert trainer.config["score_clip"] == 1.0
+    assert trainer.config["use_score_scaling"] is False
     assert trainer.config["ratio_threshold"] == 2.0
 
 

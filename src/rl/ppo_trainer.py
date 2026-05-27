@@ -382,7 +382,7 @@ class PPOTrainerWeather:
             'early_stopping': True,
             'ratio_threshold': 2.0,
             'score_clip': 1.0,
-            'use_score_scaling': True,
+            'use_score_scaling': False,
             'use_score_norm': False,
             'whiten_rewards': False,
             'seed': 42,
