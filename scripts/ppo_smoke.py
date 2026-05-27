@@ -77,6 +77,12 @@ def test_trl_imports() -> None:
         "cliprange",
         "vf_coef",
         "max_grad_norm",
+        "early_stopping",
+        "ratio_threshold",
+        "score_clip",
+        "use_score_scaling",
+        "use_score_norm",
+        "whiten_rewards",
         "seed",
         "log_with",
     }
@@ -128,6 +134,8 @@ def test_ppo_config_types() -> None:
         "cliprange",
         "vf_coef",
         "max_grad_norm",
+        "ratio_threshold",
+        "score_clip",
     }
 
     bad_fields = [
@@ -144,6 +152,9 @@ def test_ppo_config_types() -> None:
         bad_fields.append(
             f"kl_penalty={config['kl_penalty']!r} ({type(config['kl_penalty']).__name__})"
         )
+    for field in ["early_stopping", "use_score_scaling", "use_score_norm", "whiten_rewards"]:
+        if not isinstance(config[field], bool):
+            bad_fields.append(f"{field}={config[field]!r} ({type(config[field]).__name__})")
 
     if bad_fields:
         raise SystemExit("PPO config has unnormalized field types: " + ", ".join(bad_fields))

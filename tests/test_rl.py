@@ -105,6 +105,22 @@ def test_ppo_config_avoids_singleton_minibatches():
     assert trainer.config["mini_batch_size"] >= 2
     assert trainer.config["forward_batch_size"] >= 2
     assert trainer.config["batch_size"] >= trainer.config["mini_batch_size"]
+    assert trainer.config["early_stopping"] is True
+    assert trainer.config["score_clip"] == 1.0
+    assert trainer.config["ratio_threshold"] == 2.0
+
+
+def test_ppo_trainer_detects_peft_adapter_path(temp_dir):
+    adapter_dir = temp_dir / "lora_adapter"
+    adapter_dir.mkdir(parents=True)
+    (adapter_dir / "adapter_config.json").write_text("{}", encoding="utf-8")
+
+    trainer = PPOTrainerWeather(
+        model_path=str(adapter_dir),
+        reward_model=WeatherRewardModel(),
+    )
+
+    assert trainer._uses_peft_adapter() is True
 
 
 def test_ppo_train_step_rejects_too_short_responses():

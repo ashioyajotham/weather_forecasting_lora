@@ -61,9 +61,13 @@ def run_training(data_path: Path, limit: int, output_dir: Path) -> None:
             "Local CPU/disk offload can run the dry run, but not PPO training."
         )
 
-    model_path = ROOT / "models" / "weather-merged"
-    if not model_path.exists():
-        raise SystemExit(f"Missing merged SFT model: {model_path}")
+    model_path = ROOT / "models" / "weather-lora-peft" / "lora_adapter"
+    if not (model_path / "adapter_config.json").exists():
+        raise SystemExit(
+            f"Missing trainable LoRA adapter for PPO: {model_path}. "
+            "Run/import the TinyLlama LoRA adapter before PPO. "
+            "PPO on the merged full model is intentionally disabled because it produced NaN policy losses."
+        )
 
     samples = load_samples(data_path, limit)
     trainer = PPOTrainerWeather(

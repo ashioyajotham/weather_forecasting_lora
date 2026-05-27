@@ -26,6 +26,7 @@ import re
 from datetime import datetime
 import yaml
 from pathlib import Path
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -375,9 +376,15 @@ class PPOTrainerWeather:
             'kl_penalty': 'kl',         # Explicit KL regularization
             'init_kl_coef': 0.2,        # Initial KL coefficient
             'target_kl': 0.05,          # Target KL divergence
-            'cliprange': 0.2,           # PPO clipping range
+            'cliprange': 0.1,           # PPO clipping range
             'vf_coef': 0.1,             # Value function coefficient
             'max_grad_norm': 1.0,       # Gradient clipping
+            'early_stopping': True,
+            'ratio_threshold': 2.0,
+            'score_clip': 1.0,
+            'use_score_scaling': True,
+            'use_score_norm': False,
+            'whiten_rewards': False,
             'seed': 42,
             'min_new_tokens': 8,
             'max_new_tokens': 64,
@@ -413,6 +420,8 @@ class PPOTrainerWeather:
             'cliprange',
             'vf_coef',
             'max_grad_norm',
+            'ratio_threshold',
+            'score_clip',
             'temperature',
             'top_p',
         }
@@ -423,6 +432,10 @@ class PPOTrainerWeather:
             default_config[field] = float(default_config[field])
         default_config['kl_penalty'] = str(default_config['kl_penalty'])
         default_config['do_sample'] = bool(default_config['do_sample'])
+        default_config['early_stopping'] = bool(default_config['early_stopping'])
+        default_config['use_score_scaling'] = bool(default_config['use_score_scaling'])
+        default_config['use_score_norm'] = bool(default_config['use_score_norm'])
+        default_config['whiten_rewards'] = bool(default_config['whiten_rewards'])
         if default_config['mini_batch_size'] < 2 or default_config['forward_batch_size'] < 2:
             raise ValueError(
                 "PPO mini_batch_size and forward_batch_size must be at least 2. "
@@ -436,6 +449,29 @@ class PPOTrainerWeather:
             raise ValueError("PPO max_new_tokens must be greater than or equal to min_new_tokens.")
 
         return default_config
+
+    def _uses_peft_adapter(self) -> bool:
+        """Return whether model_path points at a LoRA/PEFT adapter."""
+        return (Path(self.model_path) / "adapter_config.json").exists()
+
+    def _log_trainable_parameters(self):
+        trainable = 0
+        total = 0
+        for param in self.model.parameters():
+            count = param.numel()
+            total += count
+            if param.requires_grad:
+                trainable += count
+
+        if trainable == 0:
+            raise RuntimeError("PPO model has zero trainable parameters")
+
+        logger.info(
+            "PPO trainable parameters: %d/%d (%.4f%%)",
+            trainable,
+            total,
+            100 * trainable / max(total, 1),
+        )
     
     def load_model(self):
         """Load SFT model and prepare for PPO training."""
@@ -446,13 +482,33 @@ class PPOTrainerWeather:
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
         
+        model_kwargs = {
+            "device_map": "auto",
+            "dtype": torch.float16,
+        }
+
+        if self._uses_peft_adapter():
+            with open(Path(self.model_path) / "adapter_config.json", encoding="utf-8") as handle:
+                adapter_config = json.load(handle)
+            logger.info(
+                "Loading trainable LoRA adapter for PPO from %s with base model %s",
+                self.model_path,
+                adapter_config.get("base_model_name_or_path", "<unknown>"),
+            )
+            model_kwargs["is_trainable"] = True
+        else:
+            logger.warning(
+                "PPO model_path %s is not a PEFT adapter. This trains the full model and is prone to NaNs/OOM.",
+                self.model_path,
+            )
+
         # Load model with value head for PPO
         self.model = AutoModelForCausalLMWithValueHead.from_pretrained(
             self.model_path,
-            device_map="auto",
-            torch_dtype=torch.float16
+            **model_kwargs,
         )
         self.device = self._model_device()
+        self._log_trainable_parameters()
         
         logger.info(f"Model loaded with value head for PPO training on {self.device}")
         return self.model
@@ -531,6 +587,12 @@ class PPOTrainerWeather:
             cliprange=self.config['cliprange'],
             vf_coef=self.config['vf_coef'],
             max_grad_norm=self.config['max_grad_norm'],
+            early_stopping=self.config['early_stopping'],
+            ratio_threshold=self.config['ratio_threshold'],
+            score_clip=self.config['score_clip'],
+            use_score_scaling=self.config['use_score_scaling'],
+            use_score_norm=self.config['use_score_norm'],
+            whiten_rewards=self.config['whiten_rewards'],
             seed=self.config['seed'],
             log_with=None  # Can add wandb/tensorboard
         )
