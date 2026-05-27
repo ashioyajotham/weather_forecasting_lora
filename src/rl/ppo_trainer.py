@@ -367,9 +367,9 @@ class PPOTrainerWeather:
         """Load PPO configuration."""
         default_config = {
             'batch_size': 4,
-            'forward_batch_size': 1,
+            'forward_batch_size': 2,
             'learning_rate': 2e-6,      # Conservative for T4 smoke PPO stability
-            'mini_batch_size': 1,
+            'mini_batch_size': 2,
             'gradient_accumulation_steps': 1,
             'ppo_epochs': 1,
             'kl_penalty': 'kl',         # Explicit KL regularization
@@ -379,6 +379,7 @@ class PPOTrainerWeather:
             'vf_coef': 0.1,             # Value function coefficient
             'max_grad_norm': 1.0,       # Gradient clipping
             'seed': 42,
+            'min_new_tokens': 8,
             'max_new_tokens': 64,
             'temperature': 0.5,
             'top_p': 0.9,
@@ -401,6 +402,7 @@ class PPOTrainerWeather:
             'gradient_accumulation_steps',
             'ppo_epochs',
             'seed',
+            'min_new_tokens',
             'max_new_tokens',
             'top_k',
         }
@@ -421,6 +423,17 @@ class PPOTrainerWeather:
             default_config[field] = float(default_config[field])
         default_config['kl_penalty'] = str(default_config['kl_penalty'])
         default_config['do_sample'] = bool(default_config['do_sample'])
+        if default_config['mini_batch_size'] < 2 or default_config['forward_batch_size'] < 2:
+            raise ValueError(
+                "PPO mini_batch_size and forward_batch_size must be at least 2. "
+                "TRL classic PPO can produce NaNs when whitening singleton minibatches."
+            )
+        if default_config['batch_size'] < default_config['mini_batch_size']:
+            raise ValueError("PPO batch_size must be greater than or equal to mini_batch_size.")
+        if default_config['min_new_tokens'] < 2:
+            raise ValueError("PPO min_new_tokens must be at least 2 to avoid empty response masks.")
+        if default_config['max_new_tokens'] < default_config['min_new_tokens']:
+            raise ValueError("PPO max_new_tokens must be greater than or equal to min_new_tokens.")
 
         return default_config
     
@@ -476,9 +489,31 @@ class PPOTrainerWeather:
         for key, value in stats.items():
             if isinstance(value, torch.Tensor):
                 if torch.is_floating_point(value) and not torch.isfinite(value).all():
-                    raise RuntimeError(f"Non-finite PPO stat {key}: {value}")
+                    raise RuntimeError(
+                        f"Non-finite PPO stat {key}: {value}. "
+                        "Likely causes: singleton PPO minibatch, empty/too-short response, "
+                        "or unstable full-model PPO update."
+                    )
             elif isinstance(value, (float, np.floating)) and not np.isfinite(value):
-                raise RuntimeError(f"Non-finite PPO stat {key}: {value}")
+                raise RuntimeError(
+                    f"Non-finite PPO stat {key}: {value}. "
+                    "Likely causes: singleton PPO minibatch, empty/too-short response, "
+                    "or unstable full-model PPO update."
+                )
+
+    @staticmethod
+    def _validate_response_tensors(response_tensors: List[torch.Tensor]):
+        """Reject response batches that are too short for stable PPO whitening."""
+        response_lengths = [int(response_tensor.numel()) for response_tensor in response_tensors]
+        if any(length < 2 for length in response_lengths):
+            raise RuntimeError(
+                f"PPO generated too-short responses for training: lengths={response_lengths}. "
+                "Increase min_new_tokens or inspect model generation quality."
+            )
+        if sum(response_lengths) <= 1:
+            raise RuntimeError(
+                f"PPO response token count is too small for training: lengths={response_lengths}"
+            )
     
     def create_ppo_trainer(self) -> PPOTrainer:
         """Create PPO trainer with weather-specific configuration."""
@@ -534,7 +569,7 @@ class PPOTrainerWeather:
         attention_masks = []
         for prompt in prompts:
             tokens = self.tokenizer.encode(prompt, return_tensors="pt")
-            query_tensor = tokens.squeeze().to(model_device)
+            query_tensor = tokens.squeeze(0).to(model_device)
             query_tensors.append(query_tensor)
             attention_masks.append(torch.ones_like(query_tensor, device=model_device))
         
@@ -545,6 +580,7 @@ class PPOTrainerWeather:
                 response = self.model.generate(
                     query_tensor.unsqueeze(0).to(model_device),
                     attention_mask=attention_mask.unsqueeze(0).to(model_device),
+                    min_new_tokens=self.config['min_new_tokens'],
                     max_new_tokens=self.config['max_new_tokens'],
                     temperature=self.config['temperature'],
                     top_p=self.config['top_p'],
@@ -557,6 +593,8 @@ class PPOTrainerWeather:
                 # Extract only generated part
                 response_tensor = response[0][len(query_tensor):]
                 response_tensors.append(response_tensor)
+
+        self._validate_response_tensors(response_tensors)
         
         # Decode responses
         responses = [
@@ -580,6 +618,11 @@ class PPOTrainerWeather:
             torch.tensor(reward, dtype=torch.float32, device=model_device)
             for reward in rewards
         ]
+        logger.info(
+            "PPO step inputs: response_lengths=%s rewards=%s",
+            [int(response_tensor.numel()) for response_tensor in response_tensors],
+            [float(reward.detach().cpu()) for reward in rewards],
+        )
         
         # PPO step
         stats = self.ppo_trainer.step(query_tensors, response_tensors, rewards)

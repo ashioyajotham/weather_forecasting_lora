@@ -5,8 +5,8 @@
 ppo:
   # Batch size (Schulman Sec. 4.2: moderate for LoRA stability)
   batch_size: 4
-  forward_batch_size: 1
-  mini_batch_size: 1
+  forward_batch_size: 2
+  mini_batch_size: 2
   gradient_accumulation_steps: 1
   
   # Learning rate (smaller than SFT for stability)
@@ -52,6 +52,7 @@ reward_model:
 
 # Generation Configuration
 generation:
+  min_new_tokens: 8         # Avoid singleton/empty response masks in PPO
   max_new_tokens: 64        # Maximum tokens to generate
   temperature: 0.5          # Sampling temperature
   top_p: 0.9               # Nucleus sampling

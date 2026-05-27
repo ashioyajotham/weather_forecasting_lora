@@ -22,6 +22,13 @@ class ValueHeadLikeModel(torch.nn.Module):
         return torch.cat([input_ids, response], dim=1)
 
 
+class ShortResponseModel(ValueHeadLikeModel):
+    def generate(self, input_ids, **kwargs):
+        self.generate_calls.append(kwargs)
+        response = torch.tensor([[10]], device=input_ids.device)
+        return torch.cat([input_ids, response], dim=1)
+
+
 class MinimalTokenizer:
     pad_token_id = 0
 
@@ -80,12 +87,44 @@ def test_ppo_train_step_passes_list_of_scalar_score_tensors():
     assert len(trainer.model.generate_calls) == 2
     for generate_kwargs in trainer.model.generate_calls:
         assert "attention_mask" in generate_kwargs
+        assert generate_kwargs["min_new_tokens"] == trainer.config["min_new_tokens"]
         assert generate_kwargs["max_new_tokens"] == trainer.config["max_new_tokens"]
         assert generate_kwargs["temperature"] == trainer.config["temperature"]
         assert generate_kwargs["top_p"] == trainer.config["top_p"]
         assert generate_kwargs["top_k"] == trainer.config["top_k"]
         assert generate_kwargs["remove_invalid_values"] is True
         assert generate_kwargs["renormalize_logits"] is True
+
+
+def test_ppo_config_avoids_singleton_minibatches():
+    trainer = PPOTrainerWeather(
+        model_path="unused",
+        reward_model=WeatherRewardModel(),
+    )
+
+    assert trainer.config["mini_batch_size"] >= 2
+    assert trainer.config["forward_batch_size"] >= 2
+    assert trainer.config["batch_size"] >= trainer.config["mini_batch_size"]
+
+
+def test_ppo_train_step_rejects_too_short_responses():
+    trainer = PPOTrainerWeather(
+        model_path="unused",
+        reward_model=WeatherRewardModel(),
+    )
+    trainer.model = ShortResponseModel()
+    trainer.tokenizer = MinimalTokenizer()
+    trainer.ppo_trainer = CapturingPPOTrainer()
+
+    with pytest.raises(RuntimeError, match="too-short responses"):
+        trainer.train_step(
+            [
+                {"input": "Weather data for Nairobi\nGenerate a forecast bulletin:"},
+                {"input": "Weather data for Kisumu\nGenerate a forecast bulletin:"},
+            ]
+        )
+
+    assert trainer.ppo_trainer.calls == []
 
 
 def test_ppo_training_fails_when_all_steps_fail(temp_dir):
