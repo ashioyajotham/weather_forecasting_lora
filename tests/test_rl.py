@@ -14,8 +14,10 @@ class ValueHeadLikeModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.weight = torch.nn.Parameter(torch.zeros(1))
+        self.generate_calls = []
 
     def generate(self, input_ids, **kwargs):
+        self.generate_calls.append(kwargs)
         response = torch.tensor([[10, 11]], device=input_ids.device)
         return torch.cat([input_ids, response], dim=1)
 
@@ -75,6 +77,15 @@ def test_ppo_train_step_passes_list_of_scalar_score_tensors():
 
     assert "ppo/returns/mean" in stats
     assert len(trainer.ppo_trainer.calls) == 1
+    assert len(trainer.model.generate_calls) == 2
+    for generate_kwargs in trainer.model.generate_calls:
+        assert "attention_mask" in generate_kwargs
+        assert generate_kwargs["max_new_tokens"] == trainer.config["max_new_tokens"]
+        assert generate_kwargs["temperature"] == trainer.config["temperature"]
+        assert generate_kwargs["top_p"] == trainer.config["top_p"]
+        assert generate_kwargs["top_k"] == trainer.config["top_k"]
+        assert generate_kwargs["remove_invalid_values"] is True
+        assert generate_kwargs["renormalize_logits"] is True
 
 
 def test_ppo_training_fails_when_all_steps_fail(temp_dir):
@@ -95,4 +106,25 @@ def test_ppo_training_fails_when_all_steps_fail(temp_dir):
             training_data=[{"input": "Weather data\nGenerate a forecast bulletin:"}],
             num_epochs=1,
             output_dir=str(temp_dir / "ppo-zero-success"),
+        )
+
+
+def test_ppo_training_reraises_fatal_cuda_errors(temp_dir):
+    trainer = PPOTrainerWeather(
+        model_path="unused",
+        reward_model=WeatherRewardModel(),
+    )
+    trainer.model = ValueHeadLikeModel()
+    trainer.ppo_trainer = object()
+
+    def failing_train_step(batch, observed_weather=None):
+        raise RuntimeError("CUDA error: device-side assert triggered")
+
+    trainer.train_step = failing_train_step
+
+    with pytest.raises(RuntimeError, match="device-side assert"):
+        trainer.train(
+            training_data=[{"input": "Weather data\nGenerate a forecast bulletin:"}],
+            num_epochs=1,
+            output_dir=str(temp_dir / "ppo-fatal"),
         )

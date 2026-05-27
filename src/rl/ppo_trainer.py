@@ -366,19 +366,24 @@ class PPOTrainerWeather:
     def _load_config(self) -> dict:
         """Load PPO configuration."""
         default_config = {
-            'batch_size': 8,
-            'forward_batch_size': 4,
-            'learning_rate': 1e-5,      # Smaller than SFT (Schulman Sec. 4.1)
-            'mini_batch_size': 4,
+            'batch_size': 4,
+            'forward_batch_size': 1,
+            'learning_rate': 2e-6,      # Conservative for T4 smoke PPO stability
+            'mini_batch_size': 1,
             'gradient_accumulation_steps': 1,
-            'ppo_epochs': 4,
+            'ppo_epochs': 1,
             'kl_penalty': 'kl',         # Explicit KL regularization
-            'init_kl_coef': 0.1,        # Initial KL coefficient
-            'target_kl': 0.1,           # Target KL divergence
+            'init_kl_coef': 0.2,        # Initial KL coefficient
+            'target_kl': 0.05,          # Target KL divergence
             'cliprange': 0.2,           # PPO clipping range
             'vf_coef': 0.1,             # Value function coefficient
             'max_grad_norm': 1.0,       # Gradient clipping
-            'seed': 42
+            'seed': 42,
+            'max_new_tokens': 64,
+            'temperature': 0.5,
+            'top_p': 0.9,
+            'top_k': 50,
+            'do_sample': True,
         }
         
         if self.config_path and Path(self.config_path).exists():
@@ -386,6 +391,8 @@ class PPOTrainerWeather:
                 config = yaml.safe_load(f)
                 if 'ppo' in config:
                     default_config.update(config['ppo'])
+                if 'generation' in config:
+                    default_config.update(config['generation'])
 
         int_fields = {
             'batch_size',
@@ -394,6 +401,8 @@ class PPOTrainerWeather:
             'gradient_accumulation_steps',
             'ppo_epochs',
             'seed',
+            'max_new_tokens',
+            'top_k',
         }
         float_fields = {
             'learning_rate',
@@ -402,6 +411,8 @@ class PPOTrainerWeather:
             'cliprange',
             'vf_coef',
             'max_grad_norm',
+            'temperature',
+            'top_p',
         }
 
         for field in int_fields:
@@ -409,6 +420,7 @@ class PPOTrainerWeather:
         for field in float_fields:
             default_config[field] = float(default_config[field])
         default_config['kl_penalty'] = str(default_config['kl_penalty'])
+        default_config['do_sample'] = bool(default_config['do_sample'])
 
         return default_config
     
@@ -443,6 +455,30 @@ class PPOTrainerWeather:
                 pass
 
         return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    @staticmethod
+    def _is_fatal_training_error(error: Exception) -> bool:
+        """Identify CUDA/numerical failures that leave the trainer unsafe to continue."""
+        message = str(error).lower()
+        fatal_markers = (
+            "device-side assert",
+            "cuda error",
+            "probability tensor contains",
+            "nan",
+            "inf",
+            "non-finite",
+        )
+        return any(marker in message for marker in fatal_markers)
+
+    @staticmethod
+    def _assert_finite_stats(stats: Dict[str, Union[float, torch.Tensor]]):
+        """Fail fast if PPO reports non-finite scalar statistics."""
+        for key, value in stats.items():
+            if isinstance(value, torch.Tensor):
+                if torch.is_floating_point(value) and not torch.isfinite(value).all():
+                    raise RuntimeError(f"Non-finite PPO stat {key}: {value}")
+            elif isinstance(value, (float, np.floating)) and not np.isfinite(value):
+                raise RuntimeError(f"Non-finite PPO stat {key}: {value}")
     
     def create_ppo_trainer(self) -> PPOTrainer:
         """Create PPO trainer with weather-specific configuration."""
@@ -495,20 +531,28 @@ class PPOTrainerWeather:
         
         # Tokenize queries
         query_tensors = []
+        attention_masks = []
         for prompt in prompts:
             tokens = self.tokenizer.encode(prompt, return_tensors="pt")
-            query_tensors.append(tokens.squeeze().to(model_device))
+            query_tensor = tokens.squeeze().to(model_device)
+            query_tensors.append(query_tensor)
+            attention_masks.append(torch.ones_like(query_tensor, device=model_device))
         
         # Generate responses
         response_tensors = []
         with torch.no_grad():
-            for query_tensor in query_tensors:
+            for query_tensor, attention_mask in zip(query_tensors, attention_masks):
                 response = self.model.generate(
                     query_tensor.unsqueeze(0).to(model_device),
-                    max_new_tokens=128,
-                    temperature=0.7,
-                    do_sample=True,
-                    pad_token_id=self.tokenizer.pad_token_id
+                    attention_mask=attention_mask.unsqueeze(0).to(model_device),
+                    max_new_tokens=self.config['max_new_tokens'],
+                    temperature=self.config['temperature'],
+                    top_p=self.config['top_p'],
+                    top_k=self.config['top_k'],
+                    do_sample=self.config['do_sample'],
+                    pad_token_id=self.tokenizer.pad_token_id,
+                    remove_invalid_values=True,
+                    renormalize_logits=True,
                 )
                 # Extract only generated part
                 response_tensor = response[0][len(query_tensor):]
@@ -527,6 +571,8 @@ class PPOTrainerWeather:
             reward_components = self.reward_model.calculate_composite_reward(
                 response, obs_weather
             )
+            if not np.isfinite(reward_components.total_reward):
+                raise RuntimeError(f"Non-finite reward for response {i}: {reward_components.total_reward}")
             rewards.append(reward_components.total_reward)
         
         # TRL classic PPO expects one scalar score tensor per response.
@@ -537,6 +583,7 @@ class PPOTrainerWeather:
         
         # PPO step
         stats = self.ppo_trainer.step(query_tensors, response_tensors, rewards)
+        self._assert_finite_stats(stats)
         
         return stats
     
@@ -604,6 +651,8 @@ class PPOTrainerWeather:
                 except Exception as e:
                     failed_steps += 1
                     logger.warning(f"Error in training step {step}: {e}")
+                    if self._is_fatal_training_error(e):
+                        raise
                     continue
 
         if successful_steps == 0:

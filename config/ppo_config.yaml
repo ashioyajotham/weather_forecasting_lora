@@ -4,23 +4,23 @@
 # PPO Configuration (Schulman Sec. 4.1: stability recommendations)
 ppo:
   # Batch size (Schulman Sec. 4.2: moderate for LoRA stability)
-  batch_size: 8
-  forward_batch_size: 4
-  mini_batch_size: 4
+  batch_size: 4
+  forward_batch_size: 1
+  mini_batch_size: 1
   gradient_accumulation_steps: 1
   
   # Learning rate (smaller than SFT for stability)
-  learning_rate: 0.00001     # Much smaller than SFT 5e-5
+  learning_rate: 0.000002    # Conservative for T4 smoke PPO stability
   
   # PPO specific parameters
-  ppo_epochs: 4              # Number of PPO epochs per batch
+  ppo_epochs: 1              # Keep first Colab run numerically conservative
   cliprange: 0.2             # PPO clipping range
   vf_coef: 0.1              # Value function coefficient
   
   # KL regularization (Schulman Sec. 4.1: critical for LoRA)
   kl_penalty: "kl"          # Use KL penalty
-  init_kl_coef: 0.1         # Initial KL coefficient
-  target_kl: 0.1            # Target KL divergence
+  init_kl_coef: 0.2         # Initial KL coefficient
+  target_kl: 0.05           # Target KL divergence
   kl_beta: 0.1              # KL beta for adaptive penalty
   
   # Gradient clipping
@@ -52,8 +52,8 @@ reward_model:
 
 # Generation Configuration
 generation:
-  max_new_tokens: 128       # Maximum tokens to generate
-  temperature: 0.7          # Sampling temperature
+  max_new_tokens: 64        # Maximum tokens to generate
+  temperature: 0.5          # Sampling temperature
   top_p: 0.9               # Nucleus sampling
   top_k: 50                # Top-k sampling
   do_sample: true          # Enable sampling
